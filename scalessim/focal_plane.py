@@ -124,7 +124,8 @@ class FocalPlane:
                     imx = int(sdx)
                     dimy = sdy - imy
                     dimx = sdx - imx
-                    toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
+                    toadd = shift(toadd,(dimy,dimx))
+                    #toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
                     imy = imy - 1
                     imx = imx - 1
                     if imy < 0:
