@@ -28,7 +28,7 @@ class FocalPlane:
 
         self.area = self.Lenslet.args['area'] * u.m**2#np.pi*((self.Lenslet.args['telescope_diameter']/2)**2 - (self.Lenslet.args['secondary_diameter']/2)**2) * u.m**2
 
-    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True):
+    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False):
         output = np.zeros((len(self.lam), self.num_spaxel, self.num_spaxel))
 
         skybg = self.SkyBG.resample(self.lam) * self.fov / self.num_spaxel**2
@@ -109,22 +109,26 @@ class FocalPlane:
             xtlocs = poss-xloc
             ytlocs = poss-yloc
             for ii in range(self.num_spaxel):
-                #print(ii)
+                if verbose==True: print(ii)
                 sdx = xtlocs[ii]
                 for jj in range(self.num_spaxel):
-                    dxt = 58
-                    dyt = 58
                     sdy = ytlocs[jj]
                     tinp = self.Lenslet.trace.copy()*img[:,jj,ii].reshape([len(img),1,1])
                     tinp = tinp.sum(0)
-                    toadd = np.zeros([58,58])
+                    #if verbose==True:
+                    #    plt.imshow(tinp**0.1)
+                    #    plt.show()
+                    toadd = np.zeros([tinp.shape[0]+2,tinp.shape[1]+2])
+                    dxt = len(toadd)
+                    dyt = len(toadd[0])
                     toadd[1:1+len(tinp),1:1+len(tinp[0])] = np.array(tinp)
+
 
                     imy = int(sdy)
                     imx = int(sdx)
                     dimy = sdy - imy
                     dimx = sdx - imx
-                    toadd = shift(toadd,(dimy,dimx))
+                    #toadd = shift(toadd,(dimy,dimx))
                     #toadd[np.where(toadd < 0)] = 0.0
                     toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
                     imy = imy - 1

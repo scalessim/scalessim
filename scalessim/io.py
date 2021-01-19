@@ -227,7 +227,8 @@ class QE(DataFile):
 class Prism(DataFile):
     def __init__(self, filter_name='L'):
         if filter_name == 'L':
-            self.filename = 'L_prism_coarse.txt'
+            self.filename = 'L_prism.txt'
+            #self.filename = 'L_prism_coarse.txt'
         else:
             raise ValueError('No prism data exists for filter {}'.format(filter_name))
         self.get_data(yunits=u.dimensionless_unscaled)
@@ -241,15 +242,14 @@ class Prism(DataFile):
         return np.gradient(self.x.value) * self.x.unit
 
 class Filter(DataFile):
-    def __init__(self, lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
-        filename = 'filter_'+str(lmin)+'_'+str(lmax)+'_'+str(od)+'.txt'
+    def __init__(self, fkw = 'filter_perfect',lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
+        filename = fkw+'_'+str(lmin)+'_'+str(lmax)+'.txt'
         self.filename = filename
         #if filter_name == 'L':
         #    self.filename = 'L_filter.txt'
         #else:
         #    raise ValueError('No filter data exists for filter {}'.format(filter_name))
         self.get_data(yunits=u.dimensionless_unscaled)
-
 
 def read_ini(section):
     arg = {}

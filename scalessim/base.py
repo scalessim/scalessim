@@ -39,7 +39,7 @@ class Lenslet:
         x2=(self.xx[np.where((np.abs(self.Prism.x.value-self.lmin)<1.0e-6))])
 
 
-    def make_trace(self, upsample_factor=100,phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/'):
+    def make_trace(self, upsample_factor=100,phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/',verbose=False):
 
         toutfile = 'data/traces/trace_h2rg_'+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'.fits'
         if os.path.isfile(toutfile)==False:
@@ -51,6 +51,7 @@ class Lenslet:
             y_screen = np.linspace(-out_size[0]//2,out_size[0]//2,out_size[0]*upsample_factor)[:,None] * self.p_pitch
             x_screen = np.linspace(-out_size[1]//2,out_size[1]//2,out_size[1]*upsample_factor)[None,:] * self.p_pitch
             for i, (x, y, lam) in enumerate(zip(self.xx, self.yy, self.Prism.x)):
+                if verbose==True: print(i,lam)
                 y_screen2 = y_screen - y*self.p_pitch
                 x_screen2 = x_screen - x*self.p_pitch
                 del_y = np.pi * self.l_pitch * np.sin(np.arctan2(y_screen2, self.f))
