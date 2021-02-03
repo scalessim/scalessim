@@ -19,10 +19,14 @@ class Lenslet:
         self.lmin = args['min_wavelength']
         self.lmax = args['max_wavelength']
 
-    def get_shifts(self, Prism=Prism()):
+    def get_shifts(self, Prism=Prism(), rot = 18.43):
         self.Prism = Prism
-        toscaley = self.spectra_l/(self.lmax-self.lmin)*(np.max(self.Prism.x)-np.min(self.Prism.x))*np.cos(np.radians(18.43))
-        toscalex = self.spectra_l/(self.lmax-self.lmin)*(np.max(self.Prism.x)-np.min(self.Prism.x))*np.sin(np.radians(18.43))
+        self.rot = rot
+        #####the following lines use the default, fixed rotation angle
+        #toscaley = self.spectra_l/(self.lmax-self.lmin)*(np.max(self.Prism.x)-np.min(self.Prism.x))*np.cos(np.radians(18.43))
+        #toscalex = self.spectra_l/(self.lmax-self.lmin)*(np.max(self.Prism.x)-np.min(self.Prism.x))*np.sin(np.radians(18.43))
+        toscaley = self.spectra_l/(self.lmax-self.lmin)*(np.max(self.Prism.x)-np.min(self.Prism.x))*np.cos(np.radians(self.rot))
+        toscalex = self.spectra_l/(self.lmax-self.lmin)*(np.max(self.Prism.x)-np.min(self.Prism.x))*np.sin(np.radians(self.rot))
 
 
         self.Prism.scale_to_length(toscaley.value)
