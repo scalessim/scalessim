@@ -47,7 +47,7 @@ class Lenslet:
 
         tbase = 'data/traces/trace_h2rg_'
         if phys==True: tbase+='POP_'
-        toutfile = tbase+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'.fits'
+        toutfile = tbase+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'_'+str(self.rot)+'.fits'
         if os.path.isfile(toutfile)==False:
             mshift = np.max([np.abs(self.xx),np.abs(self.yy)])
             osize = int(np.round(2.0*mshift))+2
