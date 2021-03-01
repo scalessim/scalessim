@@ -1,6 +1,6 @@
 # scalessim
 
-A simulator for the Santa Cruz Array of Lenslets for Exoplanet Spectroscopy. 
+A simulator for the Santa Cruz Array of Lenslets for Exoplanet Spectroscopy (SCALES). 
 
 # Setup
 
@@ -22,3 +22,5 @@ Activate conda environment and open up jupyter notebook.
 conda activate scales
 jupyter notebook
 ```
+
+Open up example notebook: scales_SED_cube.ipynb. You can change the scene and settings in the second code cell.
