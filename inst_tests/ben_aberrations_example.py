@@ -2,6 +2,8 @@
 demo code, simulate a Lyot coronagraphic image, both diffraction-limited and with aberration
 '''
 
+import matplotlib.pyplot as plt
+from scipy.ndimage import shift
 import numpy as np
 
 p3i=lambda i: int(round(i)) #python2 to 3: change indicies that are floats to integers
@@ -36,7 +38,7 @@ def propagate(phase_in):
 	'''
 	generate coronagraphic image
 	'''
-	pupil_wavefront=aperture*np.exp(1j*(phase_in)) #initial 
+	pupil_wavefront=aperture*np.exp(1j*(phase_in)) #initial
 	norm=np.max(intensity(np.fft.fftshift(pupil_to_image(pupil_wavefront*lyot_stop)))) #contrast normalization
 	fpm_wavefront_ini=np.fft.fftshift(pupil_to_image(pupil_wavefront)) #ft to image plane
 	fpm_wavefront=fpm_wavefront_ini*fpm
@@ -111,3 +113,17 @@ ao_res=make_noise_pl(200e-9,imagepix,pupilpix,wav0,-2) #ao residual phase screen
 static=make_noise_pl(100e-9,imagepix,pupilpix,wav0,-2) #static aberrations
 
 im_abber=propagate(ao_res+static)
+
+
+f = plt.figure()
+plt.subplots_adjust(wspace=0)
+ax=f.add_subplot(121)
+plt.imshow(im_dl[300:700,300:700])
+ax.set_yticks([])
+ax.set_xticks([])
+ax=f.add_subplot(122)
+plt.imshow(im_abber[300:700,300:700])
+ax.set_yticks([])
+ax.set_xticks([])
+plt.savefig('ben_example.png')
+#plt.show()
