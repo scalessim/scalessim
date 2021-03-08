@@ -43,9 +43,13 @@ class Lenslet:
         x2=(self.xx[np.where((np.abs(self.Prism.x.value-self.lmin)<1.0e-6))])
 
 
-    def make_trace(self, upsample_factor=100,phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/',verbose=False):
+    def make_trace(self, upsample_factor=100,disp = True, phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/',verbose=False):
 
-        tbase = 'data/traces/trace_h2rg_'
+        if disp==False:
+            tbase = 'data/traces/trace_h2rg_'
+        else:
+            tbase = 'data/traces_disp/trace_h2rg_'
+
         if phys==True: tbase+='POP_'
         toutfile = tbase+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'_'+str(self.rot)+'.fits'
         if os.path.isfile(toutfile)==False:
@@ -92,7 +96,7 @@ class Lenslet:
                     """
                     if True in np.isnan(temp2):
                         temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
-                        print('replacing',np.round(lam.value))
+                        #print('replacing',np.round(lam.value))
                         temp2 = zoom(temp2,lam.value/np.round(lam.value))
                         if len(temp2)%2!=0: temp2 = temp2[1:,1:]
 
@@ -106,10 +110,10 @@ class Lenslet:
                     shifted = shifted/np.sum(shifted)
                 out[i] = shifted
 
-            print(out.shape)
-            print(np.sum(np.sum(out,axis=-1),axis=-1))
+            #print(out.shape)
+            #print(np.sum(np.sum(out,axis=-1),axis=-1))
             self.trace = out
             pyfits.writeto(toutfile,np.array(self.trace),clobber=True)
         else: self.trace = pyfits.getdata(toutfile)
-        plt.imshow(np.sum(self.trace,axis=0)**0.1)
-        plt.show()
+        #plt.imshow(np.sum(self.trace,axis=0)**0.1)
+        #plt.show()
