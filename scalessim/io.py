@@ -238,7 +238,9 @@ class Prism(DataFile):
             #self.filename = 'L_prism_coarse.txt'
         else:
             raise ValueError('No prism data exists for filter {}'.format(filter_name))
-        self.get_data(yunits=u.dimensionless_unscaled)
+        self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
+        print(self.ll,self.x,self.y)
+        stop
 
     def scale_to_length(self, l):
         self.y -= self.y.min()
