@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
 from astropy.modeling.blackbody import blackbody_lambda
@@ -184,9 +185,10 @@ class AtmoDispersion(DataFile):
         return re
 
 class InstTransEm(DataFile):
-    def __init__(self, emissivities=[.03,.03,.03], temps=[273*u.K,273*u.K,273*u.K]):
-        self.eps = emissivities
+    def __init__(self, tel_AO_ems=[.4], temps=[285*u.K], sc_trans = [0.4]):
+        self.eps = tel_AO_ems
         self.temps = temps
+        self.itrans = sc_trans
 
     def load(self, filename):
         self.filename = filename
@@ -202,8 +204,13 @@ class InstTransEm(DataFile):
     def get_trans(self, wavelengths):
         trans = 1
         for eps in self.eps:
-            trans *= (1-eps)
-        return np.array([trans]*len(wavelengths)) * u.dimensionless_unscaled
+            trans *= (1-eps)  #tel/AO transmission
+        tel_AO_trans = np.array([trans]*len(wavelengths)) * u.dimensionless_unscaled
+        itrans = 1
+        for tt in self.itrans:
+            itrans *= tt
+        scales_trans = np.array([itrans]*len(wavelengths)) * u.dimensionless_unscaled
+        return tel_AO_trans, scales_trans
 
     def get_em(self, wavelengths):
         key = 0
@@ -227,7 +234,7 @@ class QE(DataFile):
 class Prism(DataFile):
     def __init__(self, filter_name='L'):
         if filter_name == 'L':
-            self.filename = 'L_prism.txt'
+            self.filename = 'L_prism_Reni.txt'
             #self.filename = 'L_prism_coarse.txt'
         else:
             raise ValueError('No prism data exists for filter {}'.format(filter_name))
