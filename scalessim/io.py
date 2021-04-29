@@ -1,9 +1,11 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
 from astropy.modeling.blackbody import blackbody_lambda
 import glob
 from scipy.io import readsav
+from scipy import interpolate
 
 class DataFile:
     def __init__(self):
@@ -232,23 +234,31 @@ class QE(DataFile):
         return np.ones_like(wavelengths.value)*self.qe*u.electron / u.photon
 
 class Prism(DataFile):
-    def __init__(self, filter_name='L'):
-        if filter_name == 'L':
-            self.filename = 'L_prism_Reni.txt'
-            #self.filename = 'L_prism_coarse.txt'
+    def __init__(self, lmin, lmax):
+        self.filename = str(lmin)+'_'+str(lmax)+'_prism.txt'
+        if os.path.isfile('./data/{}'.format(self.filename))==True:
+            #####need to add ys to OG prism files
+            self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
+            ###units of dispersion curve x and y are mm!!!
+            lams_des = lams_binned=np.linspace(1.9,5.3,341)
+            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
+            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
+            x2 = xinterp(lams_des)
+            y2 = yinterp(lams_des)
+            self.ll = lams_des*u.micron
+            self.x = x2*1000.0 ##converting to microns
+            self.y = y2*1000.0 ##converting to microns
         else:
-            raise ValueError('No prism data exists for filter {}'.format(filter_name))
-        self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
-        print(self.ll,self.x,self.y)
-        stop
+            print('no prism data!')
+            stop
 
-    def scale_to_length(self, l):
-        self.y -= self.y.min()
-        self.y /= self.y.max()
-        self.y *= l
+    #def scale_to_length(self, l):
+    #    self.y -= self.y.min()
+    #    self.y /= self.y.max()
+    #    self.y *= l
 
     def get_dlam(self):
-        return np.gradient(self.x.value) * self.x.unit
+        return np.gradient(self.ll.value) * self.ll.unit
 
 class Filter(DataFile):
     def __init__(self, fkw = 'filter_perfect',lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
@@ -259,6 +269,12 @@ class Filter(DataFile):
         #else:
         #    raise ValueError('No filter data exists for filter {}'.format(filter_name))
         self.get_data(yunits=u.dimensionless_unscaled)
+
+class ImagerFilter(DataFile):
+    def __init__(self, filename='nirc2_Lp.txt'):
+        self.filename = filename
+        self.get_data(yunits=u.dimensionless_unscaled)
+
 
 def read_ini(section):
     arg = {}

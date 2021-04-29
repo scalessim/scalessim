@@ -21,17 +21,29 @@ class FocalPlane:
         self.num_spaxel = self.Lenslet.num
 
         self.dlam = self.Prism.get_dlam()
-        self.lam = self.Prism.x
+        self.lam = self.Prism.ll
         #self.pre_image = self.Target.preimage
 
         self.buffer = self.Lenslet.trace.shape[1] // 2
 
         self.area = self.Lenslet.args['area'] * u.m**2#np.pi*((self.Lenslet.args['telescope_diameter']/2)**2 - (self.Lenslet.args['secondary_diameter']/2)**2) * u.m**2
 
-    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False):
+    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False,return_phots=False):
         output = np.zeros((len(self.lam), self.num_spaxel, self.num_spaxel))
 
+
+        #test = self.SkyBG.resample(self.lam)
+        #plt.plot(self.SkyBG.x,self.SkyBG.y)
+        #plt.plot(self.lam,test)
+        #plt.show()
+        #print(test)
+
+        #print(self.fov)
+        #print(self.num_spaxel)
+        #stop
+
         skybg = self.SkyBG.resample(self.lam) * self.fov / self.num_spaxel**2
+
         instbg = self.Inst.get_em(self.lam) * self.fov / self.num_spaxel**2
         qe = self.QE.get_qe(self.lam)
 
@@ -39,16 +51,30 @@ class FocalPlane:
 
         filtertrans = self.Filter.interp(self.lam)
         skytrans = self.SkyTrans.resample(self.lam)
-        insttrans = self.Inst.get_trans(self.lam)
+        teltrans,insttrans = self.Inst.get_trans(self.lam)
+        #print(skybg)
+        #stop
+        #print(instbg)
+        #print(teltrans)
+        #print(insttrans)
 
-        self.trans = filtertrans*skytrans*insttrans * qe
+        self.trans = teltrans*insttrans*filtertrans*skytrans
 
-        bg_spec_in_dn = dit*insttrans*filtertrans*qe*(skybg + instbg) * self.dlam * self.area.to(u.cm**2) / self.gain / u.electron
+        bg_spec_in_phot = dit*(teltrans*insttrans*filtertrans*skybg + insttrans*filtertrans*instbg) * self.dlam * self.area.to(u.cm**2)
+        #print(bg_spec_in_phot)
+        #stop
+
+        #bg_spec_in_phot = dit*insttrans*filtertrans*(skybg + instbg) * self.dlam * self.area.to(u.cm**2)
+        bg_spec_in_dn = bg_spec_in_phot*qe / self.gain / u.electron
+
 
         img = np.ones_like(output)
 
         if not bg_off:
-            img = img * bg_spec_in_dn[:, None, None].si.value
+            if return_phots == True:
+                img = img * bg_spec_in_phot[:,None,None].value
+            else:
+                img = img * bg_spec_in_dn[:, None, None].si.value
 
         if Target:
             source = Target.resample(self.lam)
@@ -56,8 +82,16 @@ class FocalPlane:
             c = 2.9979e10*u.cm/u.s
             lamscm = self.lam.to(u.cm)
             source2 = source.to(u.cm*u.cm*u.g/u.s/u.s/u.cm/u.cm/u.micron/u.s) * lamscm / h / c * u.ph
-            source_spec_in_dn = dit*self.trans*source2 * self.dlam * self.area.to(u.cm**2) / self.gain / u.electron
-            img += PSF * source_spec_in_dn[:, None, None].si.value
+            source_spec_in_phot = dit*self.trans*source2 * self.dlam * self.area.to(u.cm**2)
+            source_spec_in_dn = source_spec_in_phot*qe / self.gain / u.electron
+            print(source_spec_in_dn)
+
+
+            if return_phots == True:
+                img += PSF * source_spec_in_phot[:, None, None].value
+
+            else:
+                img += PSF * source_spec_in_dn[:, None, None].si.value
 
         if cube is not None:
             print('using cube')
@@ -69,9 +103,13 @@ class FocalPlane:
             for x in range(len(cube)):
                 tmp = cube[x].to(u.cm*u.cm*u.g/u.s/u.s/u.cm/u.cm/u.micron/u.s) * lamscm[x] / h / c * u.ph
                 cube2.append(tmp)
-            mult = dit*self.trans * self.dlam * self.area.to(u.cm**2) / self.gain / u.electron
+            mult_phot = dit*self.trans * self.dlam * self.area.to(u.cm**2)
+            mult_dn = mult_phot * qe / self.gain / u.electron
 
-            img += (cube2 * mult[:, None, None]).value
+            if return_phots == True:
+                img += (cube2 * mult_phot[:, None, None]).value
+            else:
+                img += (cube2 * mult_dn[:, None, None]).value
 
 
         if return_full:
@@ -92,8 +130,10 @@ class FocalPlane:
             dx = self.Lenslet.xx[cind]
             dy = self.Lenslet.yy[cind]
 
-            npx = self.Lenslet.trace[0].shape[1]/2
-            npy = self.Lenslet.trace[0].shape[0]/2
+            #npx = self.Lenslet.trace[0].shape[1]/2
+            #npy = self.Lenslet.trace[0].shape[0]/2
+            npx = 0
+            npy = 0
 
             xloc=(npx+dx)
             yloc=(npy+dy)
@@ -108,6 +148,10 @@ class FocalPlane:
 
             xtlocs = poss-xloc
             ytlocs = poss-yloc
+
+            shiftsx = xtlocs - np.array(xtlocs,dtype='int')
+            shiftsy = ytlocs - np.array(ytlocs,dtype='int')
+
             for ii in range(self.num_spaxel):
                 if verbose==True: print(ii)
                 sdx = xtlocs[ii]
@@ -115,12 +159,10 @@ class FocalPlane:
                     sdy = ytlocs[jj]
                     tinp = self.Lenslet.trace.copy()*img[:,jj,ii].reshape([len(img),1,1])
                     tinp = tinp.sum(0)
-                    #if verbose==True:
-                    #    plt.imshow(tinp**0.1)
-                    #    plt.show()
+
                     toadd = np.zeros([tinp.shape[0]+2,tinp.shape[1]+2])
-                    dxt = len(toadd)
-                    dyt = len(toadd[0])
+                    dxt = len(toadd[0])
+                    dyt = len(toadd)
                     toadd[1:1+len(tinp),1:1+len(tinp[0])] = np.array(tinp)
 
 
@@ -128,8 +170,7 @@ class FocalPlane:
                     imx = int(sdx)
                     dimy = sdy - imy
                     dimx = sdx - imx
-                    #toadd = shift(toadd,(dimy,dimx))
-                    #toadd[np.where(toadd < 0)] = 0.0
+
                     toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
                     imy = imy - 1
                     imx = imx - 1
