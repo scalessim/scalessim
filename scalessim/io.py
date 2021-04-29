@@ -203,7 +203,16 @@ class InstTransEm(DataFile):
         out = flux.to(u.photon/u.s/u.cm**2/u.micron, equivalencies=u.spectral_density(wavelengths))
         return out / (1.*u.sr).to(u.arcsec**2)
 
+
+
     def get_trans(self, wavelengths):
+        """
+        returns the transmissions of the telescope + instrument (separately)
+
+        tel_AO_trans = 1 - tel_AO_ems is your telescope transmission
+        scales_trans = sc_trans
+        """
+
         trans = 1
         for eps in self.eps:
             trans *= (1-eps)  #tel/AO transmission
@@ -215,6 +224,11 @@ class InstTransEm(DataFile):
         return tel_AO_trans, scales_trans
 
     def get_em(self, wavelengths):
+        """
+        returns telescope + AO emission using the tel/AO emissivity (eps)
+        and a blackbody with a specified temperature
+
+        """
         key = 0
         for eps, temp in zip(self.eps, self.temps):
             Oi = eps * self.BB(temp, wavelengths)
@@ -227,6 +241,11 @@ class InstTransEm(DataFile):
         return Oall
 
 class QE(DataFile):
+    """
+    returns an array of quantum efficiencies with the same shape as the input
+    wavelengths. if a single number is given for qe, then an array containing
+    uniform qes is returned.
+    """
     def __init__(self, qe=.7):
         self.qe = qe
 
