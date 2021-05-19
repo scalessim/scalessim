@@ -15,8 +15,15 @@ class FocalPlaneImager:
         self.QE = args['QE']
         self.Filter = args['Filter']
         ltmp = self.Filter.x[np.where(self.Filter.x > np.min(self.SkyBG.x))]
-        self.lam = ltmp[np.where(ltmp < np.max(self.SkyBG.x))]
-        self.dlam = self.lam[1]-self.lam[0] ####assumes wavelengths are evenly spaced!
+        ltmp2 = ltmp[np.where(ltmp < np.max(self.SkyBG.x))]
+
+        dlamtmp = ltmp2[1:]-ltmp2[:-1]
+        self.lam = ltmp2[:-1]+0.5*dlamtmp
+        self.dlam = dlamtmp
+
+        #self.dlam = self.lam[1]-self.lam[0] ####assumes wavelengths are evenly spaced!
+
+
         self.fov = args['FOV'] * u.arcsec**2
         #self.platescale = args['PlateScale']
         self.area = args['area'] * u.m**2
@@ -27,8 +34,6 @@ class FocalPlaneImager:
 
     def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False,return_phots=False):
         output = np.zeros((self.npix,self.npix))
-        print(self.SkyBG.x)
-        print(self.lam)
         skybg = self.SkyBG.resample(self.lam) * self.fov / self.npix**2
         instbg = self.Inst.get_em(self.lam) * self.fov / self.npix**2
         qe = self.QE.get_qe(self.lam)
@@ -50,7 +55,6 @@ class FocalPlaneImager:
         if not bg_off:
             if return_phots == True:
                 img = img * np.sum(bg_spec_in_phot[:,None,None].value)
-                print(img)
             else:
                 img = img * np.sum(bg_spec_in_dn[:, None, None].si.value)
 
@@ -63,11 +67,11 @@ class FocalPlaneImager:
             source_spec_in_phot = dit*self.trans*source2 * self.dlam * self.area.to(u.cm**2)
             source_spec_in_dn = source_spec_in_phot*qe / self.gain / u.electron
 
-
-            if return_phots == True:
-                img += PSF * source_spec_in_phot[:, None, None].value
-            else:
-                img += PSF * source_spec_in_dn[:, None, None].si.value
+            for lll in range(len(PSF)):
+                if return_phots ==True:
+                    img += PSF[lll] * source_spec_in_phot[lll].value
+                else:
+                    img += PSF[lll] * source_spec_in_dn[lll].si.value
 
 
 

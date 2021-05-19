@@ -255,6 +255,7 @@ class QE(DataFile):
 class Prism(DataFile):
     def __init__(self, lmin, lmax):
         self.filename = str(lmin)+'_'+str(lmax)+'_prism.txt'
+        print(self.filename)
         if os.path.isfile('./data/{}'.format(self.filename))==True:
             #####need to add ys to OG prism files
             self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)

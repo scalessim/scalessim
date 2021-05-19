@@ -68,14 +68,15 @@ class FocalPlane:
         bg_spec_in_dn = bg_spec_in_phot*qe / self.gain / u.electron
 
 
-        img = np.ones_like(output)
 
         if not bg_off:
+            img = np.ones_like(output)
             if return_phots == True:
                 img = img * bg_spec_in_phot[:,None,None].value
             else:
                 img = img * bg_spec_in_dn[:, None, None].si.value
-
+        else:
+            img = np.zeros(output.shape)
         if Target:
             source = Target.resample(self.lam)
             h = 6.621e-27*u.cm*u.cm*u.g/u.s
@@ -98,7 +99,6 @@ class FocalPlane:
             h = 6.621e-27*u.cm*u.cm*u.g/u.s
             c = 2.9979e10*u.cm/u.s
             lamscm = self.lam.to(u.cm)
-            consts = lamscm / h / c * u.ph
             cube2 = []
             for x in range(len(cube)):
                 tmp = cube[x].to(u.cm*u.cm*u.g/u.s/u.s/u.cm/u.cm/u.micron/u.s) * lamscm[x] / h / c * u.ph
