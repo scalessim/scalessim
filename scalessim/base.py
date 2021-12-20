@@ -2,12 +2,13 @@ import os
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
 import numpy as np
-from .io import Prism
+from .io import Prism, Grism
 from scipy.ndimage import shift,filters,zoom
 
 class Lenslet:
-    def __init__(self, args):
+    def __init__(self, args, medium=False):
         self.args = args
+        self.med = medium
         self.n = args['n']
         self.fnum = args['lenslet_fnum']
         self.num = args['no_spaxel']
@@ -21,6 +22,8 @@ class Lenslet:
 
     def get_shifts(self, rot = 18.43):
         self.Prism = Prism(self.lmin,self.lmax)
+        if self.med==True:
+            self.Prism = Grism(self.lmin,self.lmax)
         self.rot = rot
 
         #####the following lines use the default, fixed rotation angle
@@ -44,6 +47,8 @@ class Lenslet:
 
         self.xx = self.Prism.x/self.p_pitch
         self.yy = self.Prism.y/self.p_pitch
+        self.xx2 = self.xx - np.min(self.xx) + 10.0
+        self.yy2 = self.yy - np.min(self.yy) + 10.0
 
     def make_trace(self, upsample_factor=100,disp = False, phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/',verbose=False):
 
@@ -53,7 +58,11 @@ class Lenslet:
             tbase = 'data/traces_disp/trace_h2rg_'
 
         if phys==True: tbase+='POP_'
+        if self.med==True: tbase+='med_'
+
         toutfile = tbase+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'_'+str(self.rot)+'.fits'
+
+
         if os.path.isfile(toutfile)==False:
             #self.xx2 = self.xx - self.xx[int(len(self.xx)/2)]
             #self.yy2 = self.yy - self.yy[int(len(self.yy)/2)]
@@ -72,6 +81,7 @@ class Lenslet:
             print(out.shape)
             y_screen2 = np.linspace(-out_size[0]//2,out_size[0]//2,out_size[0]*upsample_factor)[:,None] * self.p_pitch
             x_screen2 = np.linspace(-out_size[1]//2,out_size[1]//2,out_size[1]*upsample_factor)[None,:] * self.p_pitch
+
             for i, (x, y, lam) in enumerate(zip(self.xx2, self.yy2, self.Prism.ll)):
                 if verbose==True: print(i,lam)
                 if phys == False:
@@ -118,7 +128,6 @@ class Lenslet:
                     #plt.show()
 
 
-
                     topady = int((out_size[0]*upsample_factor-pxy)/2)
                     topadx = int((out_size[1]*upsample_factor-pxx)/2)
 
@@ -128,13 +137,14 @@ class Lenslet:
                     if topadx < 0:
                         temp2 = temp2[:,-topadx:topadx]
                         topadx = 0
-                    padded = np.pad(temp2,((topady,topady),(topadx,topadx)),mode='minimum')
+                    padded = np.pad(temp2,((topady,topady),(topadx,topadx)))
                     #padded /= np.sum(padded) / upsample_factor**2
                     #plt.imshow(padded)
                     #plt.show()
 
 
                     sample = padded.reshape((out_size[0],upsample_factor,out_size[1],upsample_factor)).mean(3).mean(1)
+
                     #f = plt.figure(figsize=(15,15))
                     #plt.imshow(sample**0.1)
                     #plt.show()
@@ -148,14 +158,14 @@ class Lenslet:
                     dx = sample.shape[1]/2.0-x
 
                     #print(dy,dx)
-
-                    shifted = shift(sample,[dy,dx],prefilter=False)
+                    shifted = shift(sample,[-dy,-dx],prefilter=False)
                     shifted = shifted/np.sum(shifted)
+
+
                     #f = plt.figure(figsize=(15,15))
                     #plt.imshow(shifted**0.1)
                     #plt.show()
                     #stop
-
                 out[i] += shifted
 
             #print(out.shape)

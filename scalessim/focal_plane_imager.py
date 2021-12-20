@@ -17,9 +17,19 @@ class FocalPlaneImager:
         ltmp = self.Filter.x[np.where(self.Filter.x > np.min(self.SkyBG.x))]
         ltmp2 = ltmp[np.where(ltmp < np.max(self.SkyBG.x))]
 
-        dlamtmp = ltmp2[1:]-ltmp2[:-1]
-        self.lam = ltmp2[:-1]+0.5*dlamtmp
-        self.dlam = dlamtmp
+        dlam = 0.01 * u.micron
+        lrange = np.max(ltmp2) - np.min(ltmp2)
+        nlams = int(lrange/dlam)
+        self.lam = np.linspace(np.min(ltmp2),np.max(ltmp2),nlams)
+        self.dlam = dlam*np.ones(self.lam.shape)
+        #print(ltmp2)
+        #print(self.lam)
+
+        #dlamtmp = ltmp2[1:]-ltmp2[:-1]
+        #self.lam = ltmp2[:-1]+0.5*dlamtmp
+        #self.dlam = dlamtmp
+        #print(dlamtmp)
+        #stop
 
         #self.dlam = self.lam[1]-self.lam[0] ####assumes wavelengths are evenly spaced!
 
