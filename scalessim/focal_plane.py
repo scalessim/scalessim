@@ -28,8 +28,10 @@ class FocalPlane:
 
         self.area = self.Lenslet.args['area'] * u.m**2#np.pi*((self.Lenslet.args['telescope_diameter']/2)**2 - (self.Lenslet.args['secondary_diameter']/2)**2) * u.m**2
 
-    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False,return_phots=False):
+    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False,return_phots=False,medium=False):
         output = np.zeros((len(self.lam), self.num_spaxel, self.num_spaxel))
+        if medium==True:
+            output = np.zeros((len(self.lam), self.num_spaxel-1, self.num_spaxel))
 
 
         #test = self.SkyBG.resample(self.lam)
@@ -85,7 +87,6 @@ class FocalPlane:
             source2 = source.to(u.cm*u.cm*u.g/u.s/u.s/u.cm/u.cm/u.micron/u.s) * lamscm / h / c * u.ph
             source_spec_in_phot = dit*self.trans*source2 * self.dlam * self.area.to(u.cm**2)
             source_spec_in_dn = source_spec_in_phot*qe / self.gain / u.electron
-            print(source_spec_in_dn)
 
 
             if return_phots == True:
@@ -117,18 +118,23 @@ class FocalPlane:
             lmin=self.Lenslet.args['min_wavelength']
             lmax=self.Lenslet.args['max_wavelength']
 
-            y1=(self.Lenslet.yy[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
-            y2=(self.Lenslet.yy[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
-            x1=(self.Lenslet.xx[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
-            x2=(self.Lenslet.xx[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
-            xsize = (x1-x2)
+            y1=(self.Lenslet.yy2[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
+            y2=(self.Lenslet.yy2[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
+            x1=(self.Lenslet.xx2[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
+            x2=(self.Lenslet.xx2[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
+            xsize=(x1-x2)
             ysize=(y1-y2)
+
             dims = int(np.ceil(self.Lenslet.args['spaxel_size_px']*(self.num_spaxel - 1) + xsize))
             poss = self.Lenslet.args['spaxel_size_px'] * np.arange(self.num_spaxel)
 
             cind = np.where(np.abs(self.lam.value - lmin)<1.0e-6)[0][0]
-            dx = self.Lenslet.xx[cind]
-            dy = self.Lenslet.yy[cind]
+            cind_max = np.where(np.abs(self.lam.value - lmax)<1.0e-6)[0][0]
+            dx = self.Lenslet.xx2[cind]
+            dy = self.Lenslet.yy2[cind]
+
+            dx_max = self.Lenslet.xx2[cind_max]
+            dy_max = self.Lenslet.yy2[cind_max]
 
             #npx = self.Lenslet.trace[0].shape[1]/2
             #npy = self.Lenslet.trace[0].shape[0]/2
@@ -151,50 +157,123 @@ class FocalPlane:
 
             shiftsx = xtlocs - np.array(xtlocs,dtype='int')
             shiftsy = ytlocs - np.array(ytlocs,dtype='int')
-
-            for ii in range(self.num_spaxel):
-                if verbose==True: print(ii)
-                sdx = xtlocs[ii]
-                for jj in range(self.num_spaxel):
-                    sdy = ytlocs[jj]
-                    tinp = self.Lenslet.trace.copy()*img[:,jj,ii].reshape([len(img),1,1])
-                    tinp = tinp.sum(0)
-
-                    toadd = np.zeros([tinp.shape[0]+2,tinp.shape[1]+2])
-                    dxt = len(toadd[0])
-                    dyt = len(toadd)
-                    toadd[1:1+len(tinp),1:1+len(tinp[0])] = np.array(tinp)
+            print('nspax = ',self.num_spaxel)
 
 
-                    imy = int(sdy)
-                    imx = int(sdx)
-                    dimy = sdy - imy
-                    dimx = sdx - imx
+            if medium==True:
+                shifts = pyfits.getdata('/Users/stephsallum/Dropbox/scalessim/data/medres_shifts.fits')
+                for ii in range(self.num_spaxel):
+                #for ii in range(1,2):
+                    if verbose==True: print(ii)
+                    for jj in range(self.num_spaxel-1):
+                        if verbose == True: print(ii,jj)
+                        shiftx,shifty = shifts[ii,jj,1],shifts[ii,jj,0]
 
-                    toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
-                    imy = imy - 1
-                    imx = imx - 1
-                    if imy < 0:
-                        toadd = toadd[int(np.abs(imy)):,:]
-                        py = 0
-                        dyt = len(toadd)
-                        imy = 0
-                    if imx < 0:
-                        toadd = toadd[:,int(np.abs(imx)):]
-                        px = 0
+                        tinp = self.Lenslet.trace.copy()*img[:,jj,ii].reshape([len(img),1,1])
+                        tinp = tinp.sum(0)
+
+
+
+                        toadd = np.zeros([tinp.shape[0]+2,tinp.shape[1]+2])
                         dxt = len(toadd[0])
-                        imx = 0
-                    lpx = imx+dxt
-                    if lpx > 2048:
-                        cx = lpx-2048
-                        toadd = toadd[:,:-cx]
-                        dxt = len(toadd[0])
-                    lpy = imy+dyt
-                    if lpy > 2048:
-                        cy = lpy-2048
-                        toadd = toadd[:-cy,:]
                         dyt = len(toadd)
-                    out_array[imy:imy+dyt,imx:imx+dxt] += toadd
+                        toadd[1:1+len(tinp),1:1+len(tinp[0])] = np.array(tinp)
+
+
+                        ###shifty is where the spectrum should get moved to
+                        ####dy is where the spectrum starts in the trace
+                        dimy = shifty-int(shifty) - (dy-int(dy))
+                        dimx = shiftx-int(shiftx) - (dx-int(dx))
+                        ###shift by the correct non-integer value
+                        print(dimx,dimy)
+                        toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
+
+                        ####crop to correct amount
+                        pad = 6
+                        toadd = toadd[int(dy-pad):int(dy+ysize+pad),int(dx-pad):int(dx+xsize+pad)]
+                        print(toadd.shape)
+                        ystart = int(shifty)
+                        xstart = int(shiftx)
+                        xend = int(shiftx)+len(toadd[0])
+                        yend = int(shifty)+len(toadd)
+                        print(xstart,ystart)
+                        print(xend,yend)
+                        if xend > 2048:
+                            toadd = toadd[:,:-(xend-2048)]
+                            xend = 2048
+                        if yend > 2048:
+                            toadd = toadd[:-(yend-2048),:]
+                        """
+                        if imy < 0:
+                            toadd = toadd[int(np.abs(imy)):,:]
+                            py = 0
+                            dyt = len(toadd)
+                            imy = 0
+                        if imx < 0:
+                            toadd = toadd[:,int(np.abs(imx)):]
+                            px = 0
+                            dxt = len(toadd[0])
+                            imx = 0
+                        lpx = imx+dxt
+                        if lpx > 2048:
+                            cx = lpx-2048
+                            toadd = toadd[:,:-cx]
+                            dxt = len(toadd[0])
+                        lpy = imy+dyt
+                        if lpy > 2048:
+                            cy = lpy-2048
+                            toadd = toadd[:-cy,:]
+                            dyt = len(toadd)
+                        print(imy,imx)
+                        print(toadd.shape)
+                        stop
+                        """
+                        pyfits.writeto('test_toadd.fits',np.array(toadd),clobber=True)
+                        out_array[ystart:yend,xstart:xend] += toadd
+            else:
+                for ii in range(self.num_spaxel):
+                    if verbose==True: print(ii)
+                    sdx = xtlocs[ii]
+                    for jj in range(self.num_spaxel):
+                        sdy = ytlocs[jj]
+                        tinp = self.Lenslet.trace.copy()*img[:,jj,ii].reshape([len(img),1,1])
+                        tinp = tinp.sum(0)
+
+                        toadd = np.zeros([tinp.shape[0]+2,tinp.shape[1]+2])
+                        dxt = len(toadd[0])
+                        dyt = len(toadd)
+                        toadd[1:1+len(tinp),1:1+len(tinp[0])] = np.array(tinp)
+
+
+                        imy = int(sdy)
+                        imx = int(sdx)
+                        dimy = sdy - imy
+                        dimx = sdx - imx
+
+                        toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
+                        imy = imy - 1
+                        imx = imx - 1
+                        if imy < 0:
+                            toadd = toadd[int(np.abs(imy)):,:]
+                            py = 0
+                            dyt = len(toadd)
+                            imy = 0
+                        if imx < 0:
+                            toadd = toadd[:,int(np.abs(imx)):]
+                            px = 0
+                            dxt = len(toadd[0])
+                            imx = 0
+                        lpx = imx+dxt
+                        if lpx > 2048:
+                            cx = lpx-2048
+                            toadd = toadd[:,:-cx]
+                            dxt = len(toadd[0])
+                        lpy = imy+dyt
+                        if lpy > 2048:
+                            cy = lpy-2048
+                            toadd = toadd[:-cy,:]
+                            dyt = len(toadd)
+                        out_array[imy:imy+dyt,imx:imx+dxt] += toadd
             return out_array, img
         else:
             return img
