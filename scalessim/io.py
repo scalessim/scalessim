@@ -280,6 +280,42 @@ class Prism(DataFile):
     def get_dlam(self):
         return np.gradient(self.ll.value) * self.ll.unit
 
+class Grism(DataFile):
+    def __init__(self, lmin, lmax):
+        self.filename = str(lmin)+'_'+str(lmax)+'_grism.txt'
+        print(self.filename)
+        if os.path.isfile('./data/{}'.format(self.filename))==True:
+            #####need to add ys to OG prism files
+            self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
+            ###units of dispersion curve x and y are mm!!!
+            lams_des = lams_binned=np.linspace(1.9,5.3,3401)
+            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
+            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
+            x2 = xinterp(lams_des)
+            y2 = yinterp(lams_des)
+            self.ll = lams_des*u.micron
+            self.x = x2*1000.0 ##Grism file is in microns
+            self.y = y2*1000.0 ##Grism file is in microns
+        else:
+            print('no prism data!')
+            stop
+
+    #def scale_to_length(self, l):
+    #    self.y -= self.y.min()
+    #    self.y /= self.y.max()
+    #    self.y *= l
+
+    def get_dlam(self):
+        return np.gradient(self.ll.value) * self.ll.unit
+
+
+class Filter(DataFile):
+    def __init__(self, fkw = 'filter_perfect',lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
+        filename = fkw+'_'+str(lmin)+'_'+str(lmax)+'.txt'
+
+
+
+
 class Filter(DataFile):
     def __init__(self, fkw = 'filter_perfect',lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
         filename = fkw+'_'+str(lmin)+'_'+str(lmax)+'.txt'
