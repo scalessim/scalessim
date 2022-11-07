@@ -20,17 +20,32 @@ class FocalPlane:
         self.fov = (self.Lenslet.args['fov']*u.arcsec)**2
         self.num_spaxel = self.Lenslet.num
 
+        #Comment this out to see if we actually need it; it's defined within get_fp
         self.dlam = self.Prism.get_dlam()
         self.lam = self.Prism.ll
+        #Need lmin and lmax to trim PSF cube
+        self.lmin = args['min_wavelength']
+        self.lmax = args['max_wavelength']
         #self.pre_image = self.Target.preimage
 
         self.buffer = self.Lenslet.trace.shape[1] // 2
 
         self.area = self.Lenslet.args['area'] * u.m**2#np.pi*((self.Lenslet.args['telescope_diameter']/2)**2 - (self.Lenslet.args['secondary_diameter']/2)**2) * u.m**2
 
-    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False,return_phots=False,medium=False):
+    def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True, verbose=False, return_phots=False, medium=False, bra=False):
         output = np.zeros((len(self.lam), self.num_spaxel, self.num_spaxel))
-        if medium==True:
+        if medium==True and bra==False:
+            output = np.zeros((len(self.lam), self.num_spaxel-1, self.num_spaxel))
+
+        if medium==True and bra==True:
+            ###Add code to create smaller PSF cube if bra=True
+            minll2 = np.argmin(np.abs(self.Prism.ll - self.lmin * u.micron))
+            maxll2 = np.argmin(np.abs(self.Prism.ll - self.lmax * u.micron))
+            self.Prism.ll2 = self.Prism.ll[minll2:maxll2]
+            self.dlam = self.dlam[minll2:maxll2]
+            self.lam = self.Prism.ll2
+            self.xx2 = self.Lenslet.xx[minll2:maxll2] - np.min(self.Lenslet.xx) + 10.0
+            self.yy2 = self.Lenslet.yy[minll2:maxll2] - np.min(self.Lenslet.yy) + 10.0
             output = np.zeros((len(self.lam), self.num_spaxel-1, self.num_spaxel))
 
 
@@ -118,23 +133,31 @@ class FocalPlane:
             lmin=self.Lenslet.args['min_wavelength']
             lmax=self.Lenslet.args['max_wavelength']
 
-            y1=(self.Lenslet.yy2[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
-            y2=(self.Lenslet.yy2[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
-            x1=(self.Lenslet.xx2[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
-            x2=(self.Lenslet.xx2[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
-            xsize=(x1-x2)
-            ysize=(y1-y2)
+            #Should probably do an else in case of low resolution mode
+            if medium==True and bra==True:
+                xsize=len(self.xx2)
+                ysize=len(self.yy2)
+                dx = self.xx2[0]
+                dy = self.yy2[0]
+                dx_max = self.xx2[-1]
+                dy_max = self.yy2[-1]
+
+            else:
+                y1=(self.Lenslet.yy2[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
+                y2=(self.Lenslet.yy2[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
+                x1=(self.Lenslet.xx2[np.where((np.abs(self.lam.value-lmax)<1.0e-6))])[0]
+                x2=(self.Lenslet.xx2[np.where((np.abs(self.lam.value-lmin)<1.0e-6))])[0]
+                xsize=(x1-x2)
+                ysize=(y1-y2)
+                cind = np.where(np.abs(self.lam.value - lmin)<1.0e-6)[0][0]
+                cind_max = np.where(np.abs(self.lam.value - lmax)<1.0e-6)[0][0]
+                dx = self.Lenslet.xx2[cind]
+                dy = self.Lenslet.yy2[cind]
+                dx_max = self.Lenslet.xx2[cind_max]
+                dy_max = self.Lenslet.yy2[cind_max]
 
             dims = int(np.ceil(self.Lenslet.args['spaxel_size_px']*(self.num_spaxel - 1) + xsize))
             poss = self.Lenslet.args['spaxel_size_px'] * np.arange(self.num_spaxel)
-
-            cind = np.where(np.abs(self.lam.value - lmin)<1.0e-6)[0][0]
-            cind_max = np.where(np.abs(self.lam.value - lmax)<1.0e-6)[0][0]
-            dx = self.Lenslet.xx2[cind]
-            dy = self.Lenslet.yy2[cind]
-
-            dx_max = self.Lenslet.xx2[cind_max]
-            dy_max = self.Lenslet.yy2[cind_max]
 
             #npx = self.Lenslet.trace[0].shape[1]/2
             #npy = self.Lenslet.trace[0].shape[0]/2
@@ -161,7 +184,10 @@ class FocalPlane:
 
 
             if medium==True:
-                shifts = pyfits.getdata('/Users/stephsallum/Dropbox/scalessim/data/medres_shifts.fits')
+                #shifts = pyfits.getdata('/Users/stephsallum/Dropbox/scalessim/data/medres_shifts.fits')
+                #shifts = pyfits.getdata('/Users/ram/scalessim/data/medres_shifts.fits')
+                #More realistic shifts for placement on detector
+                shifts = pyfits.getdata('/Users/ram/scalessim/data/medres_shifts2.fits')
                 for ii in range(self.num_spaxel):
                 #for ii in range(1,2):
                     if verbose==True: print(ii)

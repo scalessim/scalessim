@@ -22,6 +22,73 @@ class DataFile:
         self.x = self.x * xunits
         self.y = self.y * yunits
 
+### Add code here to read in all skybg files for interpolation
+    def get_sky_data(self, nva, nam, bvt='bg', flag='mk', xunits=u.micron, yunits=u.erg/u.s/u.cm**2/u.micron):
+        #Available H2O values: 1.0, 1.6, 3.0, 5.0 mm
+        #Available airmass values: 1.0, 1.5, 2.0
+        va = [1.0, 1.6, 3.0, 5.0]
+        am = [1.0, 1.5, 2.0]
+        va1 = 10
+        va2 = 16
+        va3 = 30
+        va4 = 50
+
+        am1 = 10
+        am2 = 15
+        am3 = 20
+
+        if bvt=='bg':
+            filename_va1_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va1, am1)
+            filename_va1_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va1, am2)
+            filename_va1_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va1, am3)
+            filename_va2_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va2, am1)
+            filename_va2_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va2, am2)
+            filename_va2_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va2, am3)
+            filename_va3_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va3, am1)
+            filename_va3_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va3, am2)
+            filename_va3_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va3, am3)
+            filename_va4_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va4, am1)
+            filename_va4_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va4, am2)
+            filename_va4_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va4, am3)
+
+        if bvt=='trans':
+            filename_va1_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va1, am1)
+            filename_va1_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va1, am2)
+            filename_va1_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va1, am3)
+            filename_va2_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va2, am1)
+            filename_va2_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va2, am2)
+            filename_va2_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va2, am3)
+            filename_va3_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va3, am1)
+            filename_va3_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va3, am2)
+            filename_va3_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va3, am3)
+            filename_va4_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va4, am1)
+            filename_va4_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va4, am2)
+            filename_va4_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va4, am3)
+
+        x_va1_am1, y_va1_am1 = np.loadtxt(filename_va1_am1, unpack=True)
+        x_va1_am2, y_va1_am2 = np.loadtxt(filename_va1_am2, unpack=True)
+        x_va1_am3, y_va1_am3 = np.loadtxt(filename_va1_am3, unpack=True)
+        x_va2_am1, y_va2_am1 = np.loadtxt(filename_va2_am1, unpack=True)
+        x_va2_am2, y_va2_am2 = np.loadtxt(filename_va2_am2, unpack=True)
+        x_va2_am3, y_va2_am3 = np.loadtxt(filename_va2_am3, unpack=True)
+        x_va3_am1, y_va3_am1 = np.loadtxt(filename_va3_am1, unpack=True)
+        x_va3_am2, y_va3_am2 = np.loadtxt(filename_va3_am2, unpack=True)
+        x_va3_am3, y_va3_am3 = np.loadtxt(filename_va3_am3, unpack=True)
+        x_va4_am1, y_va4_am1 = np.loadtxt(filename_va4_am1, unpack=True)
+        x_va4_am2, y_va4_am2 = np.loadtxt(filename_va4_am2, unpack=True)
+        x_va4_am3, y_va4_am3 = np.loadtxt(filename_va4_am3, unpack=True)
+
+        self.x = x_va1_am1
+        self.y = np.zeros(len(x_va1_am1))
+
+        for w in np.arange(len(x_va1_am1)):
+            tmp = [[y_va1_am1[w], y_va2_am1[w], y_va3_am1[w], y_va4_am1[w]], [y_va1_am2[w], y_va2_am2[w], y_va3_am2[w], y_va4_am2[w]], [y_va1_am3[w], y_va2_am3[w], y_va3_am3[w], y_va4_am3[w]]]
+            f = interpolate.interp2d(va, am, tmp, kind='linear')
+            self.y[w] = f(nva, nam)
+        
+        self.x = self.x * xunits
+        self.y = self.y * yunits
+
     def to(self, to_xunits=u.micron, to_yunits=u.photon/u.s/u.cm**2/u.micron, equivalencies=None):
         equivalencies = equivalencies or u.spectral_density(self.x)
         self.x = self.x.to(to_xunits, equivalencies=u.spectral())
@@ -126,12 +193,16 @@ class Target(DataFile):
 
 class SkyBG(DataFile):
     def __init__(self, vapor, airmass, flag='mk'):
+        #if flag == 'mk':
+        #    va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
+        #    am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
+        #    self.filename = "skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va, am)
+        #    self.default_name = "skybg/mk_skybg_zm_10_10_ph.dat"
+        #    self.get_data(xunits=u.nm, yunits=u.photon/u.s/ u.nm / u.m**2) #the /arcsec**2 screws up the unit conversion
+### Add code to interpolate skybackground to any vapor and airmass value
+### Might need to make another function similar to get_data that does the interpolation part
         if flag == 'mk':
-            va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
-            am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
-            self.filename = "skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va, am)
-            self.default_name = "skybg/mk_skybg_zm_10_10_ph.dat"
-            self.get_data(xunits=u.nm, yunits=u.photon/u.s/ u.nm / u.m**2) #the /arcsec**2 screws up the unit conversion
+            self.get_sky_data(vapor, airmass, bvt='bg', xunits=u.nm, yunits=u.photon/u.s/ u.nm / u.m**2) #the /arcsec**2 screws up the unit conversion
         elif flag == 'cp':
             va = min([23, 43, 76, 100], key=lambda x:abs(x - vapor*10))
             am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
@@ -145,12 +216,14 @@ class SkyBG(DataFile):
 
 class SkyTrans(DataFile):
     def __init__(self, vapor, airmass, flag='mk'):
+        #if flag == 'mk':
+        #    va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
+        #    am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
+        #    self.filename = "skytrans/%strans_zm_%d_%d.dat"%(flag, va, am)
+        #    self.default_name = "skytrans/mktrans_zm_10_10.dat"
+        #    self.get_data(xunits=u.micron, yunits=u.dimensionless_unscaled)
         if flag == 'mk':
-            va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
-            am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
-            self.filename = "skytrans/%strans_zm_%d_%d.dat"%(flag, va, am)
-            self.default_name = "skytrans/mktrans_zm_10_10.dat"
-            self.get_data(xunits=u.micron, yunits=u.dimensionless_unscaled)
+            self.get_sky_data(vapor, airmass, bvt='trans', xunits=u.micron, yunits=u.dimensionless_unscaled)
         elif flag == 'cp':
             va = min([23, 43, 76, 100], key=lambda x:abs(x - vapor*10))
             am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
@@ -281,16 +354,34 @@ class Prism(DataFile):
         return np.gradient(self.ll.value) * self.ll.unit
 
 class Grism(DataFile):
-    def __init__(self, lmin, lmax):
+    def __init__(self, lmin, lmax, bra):
         self.filename = str(lmin)+'_'+str(lmax)+'_grism.txt'
         print(self.filename)
-        if os.path.isfile('./data/{}'.format(self.filename))==True:
+        if os.path.isfile('./data/{}'.format(self.filename))==True and bra==False:
             #####need to add ys to OG prism files
             self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
             ###units of dispersion curve x and y are mm!!!
             lams_des = lams_binned=np.linspace(1.9,5.3,3401)
-            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
-            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
+            #lams_des = lams_binned=np.linspace(1.9,5.3,34001)#
+            #xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
+            #yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
+            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic',fill_value="extrapolate")
+            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic',fill_value="extrapolate")
+            x2 = xinterp(lams_des)
+            y2 = yinterp(lams_des)
+            self.ll = lams_des*u.micron
+            self.x = x2*1000.0 ##Grism file is in microns
+            self.y = y2*1000.0 ##Grism file is in microns
+        if os.path.isfile('./data/{}'.format(self.filename))==True and bra==True:
+            #####need to add ys to OG prism files
+            self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
+            ###units of dispersion curve x and y are mm!!!
+            #lams_des = lams_binned=np.linspace(1.9,5.3,3401)
+            lams_des = lams_binned=np.linspace(1.9,5.3,34001)#
+            #xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
+            #yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
+            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic',fill_value="extrapolate")
+            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic',fill_value="extrapolate")
             x2 = xinterp(lams_des)
             y2 = yinterp(lams_des)
             self.ll = lams_des*u.micron
