@@ -2,34 +2,38 @@ import os
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
 import numpy as np
-from .io import Prism, Grism
+from .io import Prism, Grism, read_ini
 from scipy.ndimage import shift,filters,zoom
-from astropy import units as u
+import configparser
+
 
 class Lenslet:
-    def __init__(self, args, medium=False, bra=False):
-        self.args = args
+    def __init__(self, medium=False):
         self.med = medium
-        self.bra = bra
-        self.n = args['n']
-        self.fnum = args['lenslet_fnum']
-        self.num = args['no_spaxel']
-        self.l_pitch = args['spaxel_size']
+
+        config = configparser.ConfigParser()
+        config.read('data/scales_h2rg.ini')
+        arg_spaxel = {}
+        arg_spaxel.update(read_ini(config['Defined']))
+        arg_spaxel.update(read_ini(config['Derived']))
+        arg_spaxel.update(read_ini(config['User']))
+        self.args = arg_spaxel
+
+        self.n = self.args['n']
+        self.fnum = self.args['lenslet_fnum']
+        self.num = self.args['no_spaxel']
+        self.l_pitch = self.args['spaxel_size']
         self.f = self.l_pitch * self.fnum
-        self.p_pitch = args['px_pitch']
-        self.spectra_l = args['spectra_length']
-        self.spectra_sep = args['spectra_sep']
-        self.lmin = args['min_wavelength']
-        self.lmax = args['max_wavelength']
+        self.p_pitch = self.args['px_pitch']
+        self.spectra_l = self.args['spectra_length']
+        self.spectra_sep = self.args['spectra_sep']
+        self.lmin = self.args['min_wavelength']
+        self.lmax = self.args['max_wavelength']
 
     def get_shifts(self, rot = 18.43):
-        ###Hmmmm...
-        if self.med==False:
-            self.Prism = Prism(self.lmin,self.lmax)
-        if self.med==True and self.bra==False:
-            self.Prism = Grism(self.lmin,self.lmax,self.bra)
-        if self.med==True and self.bra==True:
-            self.Prism = Grism(self.lmin,self.lmax,self.bra)
+        self.Prism = Prism(self.lmin,self.lmax)
+        if self.med==True:
+            self.Prism = Grism(self.lmin,self.lmax)
         self.rot = rot
 
         #####the following lines use the default, fixed rotation angle
@@ -62,7 +66,7 @@ class Lenslet:
             tbase = 'data/traces/trace_h2rg_'
         else:
             tbase = 'data/traces_disp/trace_h2rg_'
-
+        
         if phys==True: tbase+='POP_'
         if self.med==True: tbase+='med_'
 
@@ -158,18 +162,22 @@ class Lenslet:
 
                     #print(out.shape)
 
-                    #print(y,x)
 
                     dy = sample.shape[0]/2.0-y
                     dx = sample.shape[1]/2.0-x
 
                     #print(dy,dx)
-                    shifted = shift(sample,[-dy,-dx],prefilter=False)
+                    shifted = shift(sample,[dy,dx],prefilter=False)
                     shifted = shifted/np.sum(shifted)
 
-
+                    #f = plt.figure(figsize=(15,15))
+                    #plt.imshow(sample**0.1)
+                    #plt.show()
+                    
+                    #print(x,y,dx,dy)
                     #f = plt.figure(figsize=(15,15))
                     #plt.imshow(shifted**0.1)
+                    #plt.scatter(28,28,c='r')
                     #plt.show()
                     #stop
                 out[i] += shifted
@@ -177,98 +185,7 @@ class Lenslet:
             #print(out.shape)
             #print(np.sum(np.sum(out,axis=-1),axis=-1))
             self.trace = out
-            pyfits.writeto(toutfile,np.array(self.trace),clobber=True)
+            pyfits.writeto(toutfile,np.array(self.trace),overwrite=True)
         else: self.trace = pyfits.getdata(toutfile)
         #plt.imshow(np.sum(self.trace,axis=0)**0.1)
         #plt.show()
-
-    def make_part_trace(self, upsample_factor=100,disp = False, phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/',verbose=False):
-
-        if disp==False:
-            tbase = 'data/traces/trace_h2rg_'
-        else:
-            tbase = 'data/traces_disp/trace_h2rg_'
-
-        if phys==True: tbase+='POP_'
-        if self.med==True: tbase+='med_'
-
-        toutfile = tbase+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'_'+str(self.rot)+'.fits'
-
-        if os.path.isfile(toutfile)==False:
-            minll2 = np.argmin(np.abs(self.Prism.ll - self.lmin * u.micron))
-            maxll2 = np.argmin(np.abs(self.Prism.ll - self.lmax * u.micron))
-            self.Prism.ll2 = self.Prism.ll[minll2:maxll2]
-            
-            self.xx2 = self.xx[minll2:maxll2] - np.min(self.xx) + 10.0
-            self.yy2 = self.yy[minll2:maxll2] - np.min(self.yy) + 10.0
-            mshifty = np.max(np.abs(self.yy2))
-            mshiftx = np.max(np.abs(self.xx2))
-            plt.scatter(self.xx2,self.yy2)
-            plt.show()
-            osizey = int(np.round(mshifty))+28
-            osizex = int(np.round(mshiftx))+28
-            if osizey%2 != 0: osizey+=1
-            if osizex%2 != 0: osizex+=1
-            out_size = (osizey,osizex)
-            out = np.zeros((len(self.xx2), *out_size))
-            print(out.shape)
-            y_screen2 = np.linspace(-out_size[0]//2,out_size[0]//2,out_size[0]*upsample_factor)[:,None] * self.p_pitch
-            x_screen2 = np.linspace(-out_size[1]//2,out_size[1]//2,out_size[1]*upsample_factor)[None,:] * self.p_pitch
-
-            for i, (x, y, lam) in enumerate(zip(self.xx2, self.yy2, self.Prism.ll2)):
-                if verbose==True: print(i,lam)
-                if phys == False:
-                    del_y = np.pi * self.l_pitch * np.sin(np.arctan2(y_screen2, self.f))
-                    del_x = np.pi * self.l_pitch * np.sin(np.arctan2(x_screen2, self.f))
-                    temp = np.sinc((del_y / lam.value / np.pi))**2 * np.sinc((del_x / lam.value / np.pi))**2 * (np.pi)**2
-
-                    pixels = out_size[0]
-                    sample = temp.reshape((pixels, upsample_factor, pixels, upsample_factor)).mean(3).mean(1)
-                    shifted = sample
-
-                    ####this shifts the image to go to the correct position in the trace
-                    padded = np.pad(sample, int((out_size[0]-pixels)/2), mode='minimum')
-                    shifted = shift(padded,[y,x],prefilter=False)
-
-                    shifted = shifted/np.sum(shifted)
-                if phys == True:
-                    temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value,4))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
-                    """
-                    the following few lines deal with the fact that we don't have physical optics
-                    psfs that bracket the whole wavelength range of SCALES right now - I'm interpolating
-                    between Phil's psfs which are sampled from 2.0-5.0 microns. So I just take the 2.0
-                    version and zoom out to make the shorter than 2.0 psfs, and zoom in on the 5.0 version
-                    to make the longer than 5.0 psfs. will replace this when we get a couple more psfs
-                    from Phil
-                    """
-                    if True in np.isnan(temp2):
-                        temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
-                        temp2 = zoom(temp2,lam.value/np.round(lam.value))
-                        if len(temp2)%2!=0: temp2 = temp2[1:,1:]
-
-                    pxy,pxx = temp2.shape
-
-                    topady = int((out_size[0]*upsample_factor-pxy)/2)
-                    topadx = int((out_size[1]*upsample_factor-pxx)/2)
-
-                    if topady<0:
-                        temp2 = temp2[-topady:topady]
-                        topady=0
-                    if topadx < 0:
-                        temp2 = temp2[:,-topadx:topadx]
-                        topadx = 0
-                    padded = np.pad(temp2,((topady,topady),(topadx,topadx)))
-
-                    sample = padded.reshape((out_size[0],upsample_factor,out_size[1],upsample_factor)).mean(3).mean(1)
-
-                    dy = sample.shape[0]/2.0-y
-                    dx = sample.shape[1]/2.0-x
-
-                    shifted = shift(sample,[-dy,-dx],prefilter=False)
-                    shifted = shifted/np.sum(shifted)
-
-                out[i] += shifted
-
-            self.trace = out
-            pyfits.writeto(toutfile,np.array(self.trace),clobber=True)
-        else: self.trace = pyfits.getdata(toutfile)
