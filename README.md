@@ -1,6 +1,6 @@
 # scalessim
 
-A simulator for the Santa Cruz Array of Lenslets for Exoplanet Spectroscopy (SCALES). 
+A simulator for the Slicer Combined with Array of Lenslets for Exoplanet Spectroscopy (SCALES). 
 
 # Setup
 
