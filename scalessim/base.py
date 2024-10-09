@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
 import numpy as np
-from .io import Prism, Grism, read_ini
+from .io import Prism, Grating, read_ini
 from scipy.ndimage import shift,filters,zoom
 import configparser
 
@@ -60,16 +60,10 @@ class Lenslet:
         self.xx2 = self.xx - np.min(self.xx) + 10.0
         self.yy2 = self.yy - np.min(self.yy) + 10.0
 
-    def make_trace(self, upsample_factor=100,disp = False, phys=False,physdir='POPtxtFiles/SquarePrism45mm-rotated/',verbose=False):
-
-        if disp==False:
-            tbase = 'data/traces/trace_h2rg_'
-        else:
-            tbase = 'data/traces_disp/trace_h2rg_'
-        
-        if phys==True: tbase+='POP_'
+    def make_trace(self, upsample_factor=100,verbose=False):
+        tbase = 'data/traces_disp/trace_h2rg_POP_'
+        physdir = 'data/POPtxtFiles/SquarePrism45mm-rotated/'
         if self.med==True: tbase+='med_'
-
         toutfile = tbase+str(np.round(self.lmin,2))+'_'+str(np.round(self.lmax,2))+'_'+str(self.rot)+'.fits'
 
 
@@ -94,98 +88,50 @@ class Lenslet:
 
             for i, (x, y, lam) in enumerate(zip(self.xx2, self.yy2, self.Prism.ll)):
                 if verbose==True: print(i,lam)
-                if phys == False:
-                    #y_screen2 = y_screen - y*self.p_pitch ###swap in if we want to skip the shifting later
-                    #x_screen2 = x_screen - x*self.p_pitch
-                    #y_screen2 = y_screen
-                    #x_screen2 = x_screen
+                
+                temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value,4))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
+                
+                
+                """
+                the following few lines deal with the fact that we don't have physical optics
+                psfs that bracket the whole wavelength range of SCALES right now - I'm interpolating
+                between Phil's psfs which are sampled from 2.0-5.0 microns. So I just take the 2.0
+                version and zoom out to make the shorter than 2.0 psfs, and zoom in on the 5.0 version
+                to make the longer than 5.0 psfs. will replace this when we get a couple more psfs
+                from Phil
+                """
+                if True in np.isnan(temp2):
+                    temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
+                    #print('replacing',np.round(lam.value))
+                    temp2 = zoom(temp2,lam.value/np.round(lam.value))
+                    if len(temp2)%2!=0: temp2 = temp2[1:,1:]
 
-                    del_y = np.pi * self.l_pitch * np.sin(np.arctan2(y_screen2, self.f))
-                    del_x = np.pi * self.l_pitch * np.sin(np.arctan2(x_screen2, self.f))
-                    temp = np.sinc((del_y / lam.value / np.pi))**2 * np.sinc((del_x / lam.value / np.pi))**2 * (np.pi)**2
-
-                    #temp = np.sinc((del_y / lam.value / np.pi).value)**2 * np.sinc((del_x / lam.value / np.pi).value)**2 * (np.pi)**2 ###uncomment if we want to skip the shifting later
-                    ######I divide by pi inside the sinc and multiply by pi^2 because numpy's sinc is sin(pi x)/(pi x)
-
-                    pixels = out_size[0]
-                    sample = temp.reshape((pixels, upsample_factor, pixels, upsample_factor)).mean(3).mean(1)
-                    shifted = sample
-
-                    ####this shifts the image to go to the correct position in the trace
-                    padded = np.pad(sample, int((out_size[0]-pixels)/2), mode='minimum')
-                    shifted = shift(padded,[y,x],prefilter=False)
-
-
-                    shifted = shifted/np.sum(shifted)
-                if phys == True:
-                    temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value,4))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
-                    """
-                    the following few lines deal with the fact that we don't have physical optics
-                    psfs that bracket the whole wavelength range of SCALES right now - I'm interpolating
-                    between Phil's psfs which are sampled from 2.0-5.0 microns. So I just take the 2.0
-                    version and zoom out to make the shorter than 2.0 psfs, and zoom in on the 5.0 version
-                    to make the longer than 5.0 psfs. will replace this when we get a couple more psfs
-                    from Phil
-                    """
-                    if True in np.isnan(temp2):
-                        temp2 = pyfits.getdata(physdir+'54micronPinhole'+str(np.round(lam.value))+'micronPSF_s'+str(self.p_pitch/upsample_factor)+'um_rot.fits')
-                        #print('replacing',np.round(lam.value))
-                        temp2 = zoom(temp2,lam.value/np.round(lam.value))
-                        if len(temp2)%2!=0: temp2 = temp2[1:,1:]
-
-                    pxy,pxx = temp2.shape
-                    #plt.imshow(temp2)
-                    #plt.show()
+                pxy,pxx = temp2.shape
 
 
-                    topady = int((out_size[0]*upsample_factor-pxy)/2)
-                    topadx = int((out_size[1]*upsample_factor-pxx)/2)
 
-                    if topady<0:
-                        temp2 = temp2[-topady:topady]
-                        topady=0
-                    if topadx < 0:
-                        temp2 = temp2[:,-topadx:topadx]
-                        topadx = 0
-                    padded = np.pad(temp2,((topady,topady),(topadx,topadx)))
-                    #padded /= np.sum(padded) / upsample_factor**2
-                    #plt.imshow(padded)
-                    #plt.show()
+                topady = int((out_size[0]*upsample_factor-pxy)/2)
+                topadx = int((out_size[1]*upsample_factor-pxx)/2)
+
+                if topady<0:
+                    temp2 = temp2[-topady:topady]
+                    topady=0
+                if topadx < 0:
+                    temp2 = temp2[:,-topadx:topadx]
+                    topadx = 0
+                padded = np.pad(temp2,((topady,topady),(topadx,topadx)))
 
 
-                    sample = padded.reshape((out_size[0],upsample_factor,out_size[1],upsample_factor)).mean(3).mean(1)
+                sample = padded.reshape((out_size[0],upsample_factor,out_size[1],upsample_factor)).mean(3).mean(1)
 
-                    #f = plt.figure(figsize=(15,15))
-                    #plt.imshow(sample**0.1)
-                    #plt.show()
+                dy = sample.shape[0]/2.0-y
+                dx = sample.shape[1]/2.0-x
 
+                shifted = shift(sample,[dy,dx],prefilter=False)
+                shifted = shifted/np.sum(shifted)
 
-                    #print(out.shape)
-
-
-                    dy = sample.shape[0]/2.0-y
-                    dx = sample.shape[1]/2.0-x
-
-                    #print(dy,dx)
-                    shifted = shift(sample,[dy,dx],prefilter=False)
-                    shifted = shifted/np.sum(shifted)
-
-                    #f = plt.figure(figsize=(15,15))
-                    #plt.imshow(sample**0.1)
-                    #plt.show()
-                    
-                    #print(x,y,dx,dy)
-                    #f = plt.figure(figsize=(15,15))
-                    #plt.imshow(shifted**0.1)
-                    #plt.scatter(28,28,c='r')
-                    #plt.show()
-                    #stop
                 out[i] += shifted
 
-            #print(out.shape)
-            #print(np.sum(np.sum(out,axis=-1),axis=-1))
             self.trace = out
             pyfits.writeto(toutfile,np.array(self.trace),overwrite=True)
         else: self.trace = pyfits.getdata(toutfile)
-        #plt.imshow(np.sum(self.trace,axis=0)**0.1)
-        #plt.show()

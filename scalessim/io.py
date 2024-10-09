@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
-from astropy.modeling.blackbody import blackbody_lambda
+from astropy.modeling.models import BlackBody
 import glob
 from scipy.io import readsav
 from scipy import interpolate
@@ -19,73 +19,6 @@ class DataFile:
             print('Could not find {}, using {}'.format(self.filename, self.default_name))
             self.x, self.y = np.loadtxt('./data/{}'.format(self.default_name), unpack=True)
             self.filename = self.default_name
-        self.x = self.x * xunits
-        self.y = self.y * yunits
-
-### Add code here to read in all skybg files for interpolation
-    def get_sky_data(self, nva, nam, bvt='bg', flag='mk', xunits=u.micron, yunits=u.erg/u.s/u.cm**2/u.micron):
-        #Available H2O values: 1.0, 1.6, 3.0, 5.0 mm
-        #Available airmass values: 1.0, 1.5, 2.0
-        va = [1.0, 1.6, 3.0, 5.0]
-        am = [1.0, 1.5, 2.0]
-        va1 = 10
-        va2 = 16
-        va3 = 30
-        va4 = 50
-
-        am1 = 10
-        am2 = 15
-        am3 = 20
-
-        if bvt=='bg':
-            filename_va1_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va1, am1)
-            filename_va1_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va1, am2)
-            filename_va1_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va1, am3)
-            filename_va2_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va2, am1)
-            filename_va2_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va2, am2)
-            filename_va2_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va2, am3)
-            filename_va3_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va3, am1)
-            filename_va3_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va3, am2)
-            filename_va3_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va3, am3)
-            filename_va4_am1 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va4, am1)
-            filename_va4_am2 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va4, am2)
-            filename_va4_am3 = "./data/skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va4, am3)
-
-        if bvt=='trans':
-            filename_va1_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va1, am1)
-            filename_va1_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va1, am2)
-            filename_va1_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va1, am3)
-            filename_va2_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va2, am1)
-            filename_va2_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va2, am2)
-            filename_va2_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va2, am3)
-            filename_va3_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va3, am1)
-            filename_va3_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va3, am2)
-            filename_va3_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va3, am3)
-            filename_va4_am1 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va4, am1)
-            filename_va4_am2 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va4, am2)
-            filename_va4_am3 = "./data/skytrans/%strans_zm_%d_%d.dat"%(flag, va4, am3)
-
-        x_va1_am1, y_va1_am1 = np.loadtxt(filename_va1_am1, unpack=True)
-        x_va1_am2, y_va1_am2 = np.loadtxt(filename_va1_am2, unpack=True)
-        x_va1_am3, y_va1_am3 = np.loadtxt(filename_va1_am3, unpack=True)
-        x_va2_am1, y_va2_am1 = np.loadtxt(filename_va2_am1, unpack=True)
-        x_va2_am2, y_va2_am2 = np.loadtxt(filename_va2_am2, unpack=True)
-        x_va2_am3, y_va2_am3 = np.loadtxt(filename_va2_am3, unpack=True)
-        x_va3_am1, y_va3_am1 = np.loadtxt(filename_va3_am1, unpack=True)
-        x_va3_am2, y_va3_am2 = np.loadtxt(filename_va3_am2, unpack=True)
-        x_va3_am3, y_va3_am3 = np.loadtxt(filename_va3_am3, unpack=True)
-        x_va4_am1, y_va4_am1 = np.loadtxt(filename_va4_am1, unpack=True)
-        x_va4_am2, y_va4_am2 = np.loadtxt(filename_va4_am2, unpack=True)
-        x_va4_am3, y_va4_am3 = np.loadtxt(filename_va4_am3, unpack=True)
-
-        self.x = x_va1_am1
-        self.y = np.zeros(len(x_va1_am1))
-
-        for w in np.arange(len(x_va1_am1)):
-            tmp = [[y_va1_am1[w], y_va2_am1[w], y_va3_am1[w], y_va4_am1[w]], [y_va1_am2[w], y_va2_am2[w], y_va3_am2[w], y_va4_am2[w]], [y_va1_am3[w], y_va2_am3[w], y_va3_am3[w], y_va4_am3[w]]]
-            f = interpolate.interp2d(va, am, tmp, kind='linear')
-            self.y[w] = f(nva, nam)
-        
         self.x = self.x * xunits
         self.y = self.y * yunits
 
@@ -108,84 +41,6 @@ class Vega(DataFile):
         self.get_data()
         self.to()
 
-travis_files_new = glob.glob('/Users/Briesemeister/Dropbox/dusty_2013_v2/*AGSS09.Dusty.Kzz=0.0.PHOENIX-ACES-2013.v2.7.save')
-travis_files_old = glob.glob('/Users/Briesemeister/Dropbox/aces_2013_dusty/*AGSS09.Dusty.Kzz=0.0.PHOENIX-ACES-2013.7.save')
-T_files = list(np.copy(travis_files_new))
-splits = [file.split('/')[-1].split('A')[0] for file in travis_files_new]
-for file in travis_files_old:
-    if not file.split('/')[-1].split('A')[0] in splits:
-        T_files.append(file)
-
-class Travis(DataFile):
-
-    def __init__(self, temp, logg, distance):
-
-
-        self.files = T_files
-
-        for file in self.files:
-            parts = file.split('-')
-            t = int(parts[0][-2:])*100 * u.K
-            lg = float(parts[1]) * u.dimensionless_unscaled
-            if (t == temp) & (lg == logg):
-                self.filename = file
-        try:
-            self.get_data()
-        except:
-            raise ValueError('Did not find {} {} file {}'.format(temp, logg, self.filename))
-
-        self.y = self.y * (u.R_jup/distance)**2
-        self.to()
-
-    def get_data(self):
-        data_dict = readsav(self.filename)
-        new_order = data_dict['w'].argsort()
-
-        self.x = data_dict['w'][new_order] * u.AA
-        self.y = data_dict['f'][new_order] * u.erg/u.cm**2/u.s/u.cm
-
-C_files = {}
-for file in glob.glob("/Users/Briesemeister/2017/HD130948/400to1200/sp*"):
-    total = file.split('/')[-1].split('f')
-    if total[-1][0] == '3':
-        C_files[total[0]] = file
-for file in glob.glob("/Users/Briesemeister/2017/HD130948/200to450/sp*"):
-    total = file.split('/')[-1].split('f')
-    if total[-1][0] == '5':
-        C_files[total[0]] = file
-
-class Caroline(DataFile):
-
-    def __init__(self, temp, logg, distance):
-        g_mks = int(np.around(10**logg/100, 2-int(np.floor(logg))))
-        key = 'sp_t'+str(int(temp))+'g'+str(g_mks)
-
-        self.filename = C_files[key]
-        try:
-            self.get_data()
-        except:
-            raise ValueError('Did not find {} {} file {}'.format(temp, logg, self.filename))
-
-        self.y = self.y * (u.R_jup/distance)**2
-        self.to()
-        order = self.x.argsort()
-        self.x = self.x[order]
-        self.y = self.y[order]
-
-    def get_data(self):
-        if "400to1200" in self.filename:
-            self.x, self.y = np.genfromtxt(self.filename, skip_header=2).T
-
-            self.x = self.x * u.micron
-            self.y = self.y * u.erg/u.cm**2/u.s/u.Hz
-        elif "200to450" in self.filename:
-            self.x, self.y = np.genfromtxt(self.filename, skip_header=5).T
-
-            self.x = self.x * u.Hz
-            self.y = self.y * u.erg/u.cm**2/u.s/u.Hz
-
-
-
 class Target(DataFile):
     def __init__(self, x,y):
             self.x = x*u.micron
@@ -193,16 +48,12 @@ class Target(DataFile):
 
 class SkyBG(DataFile):
     def __init__(self, vapor, airmass, flag='mk'):
-        #if flag == 'mk':
-        #    va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
-        #    am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
-        #    self.filename = "skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va, am)
-        #    self.default_name = "skybg/mk_skybg_zm_10_10_ph.dat"
-        #    self.get_data(xunits=u.nm, yunits=u.photon/u.s/ u.nm / u.m**2) #the /arcsec**2 screws up the unit conversion
-### Add code to interpolate skybackground to any vapor and airmass value
-### Might need to make another function similar to get_data that does the interpolation part
         if flag == 'mk':
-            self.get_sky_data(vapor, airmass, bvt='bg', xunits=u.nm, yunits=u.photon/u.s/ u.nm / u.m**2) #the /arcsec**2 screws up the unit conversion
+            va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
+            am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
+            self.filename = "skybg/%s_skybg_zm_%d_%d_ph.dat"%(flag, va, am)
+            self.default_name = "skybg/mk_skybg_zm_10_10_ph.dat"
+            self.get_data(xunits=u.nm, yunits=u.photon/u.s/ u.nm / u.m**2) #the /arcsec**2 screws up the unit conversion
         elif flag == 'cp':
             va = min([23, 43, 76, 100], key=lambda x:abs(x - vapor*10))
             am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
@@ -214,16 +65,15 @@ class SkyBG(DataFile):
         self.to()
         self.y /= u.arcsec**2  #added back /arcsec**2
 
+
 class SkyTrans(DataFile):
     def __init__(self, vapor, airmass, flag='mk'):
-        #if flag == 'mk':
-        #    va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
-        #    am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
-        #    self.filename = "skytrans/%strans_zm_%d_%d.dat"%(flag, va, am)
-        #    self.default_name = "skytrans/mktrans_zm_10_10.dat"
-        #    self.get_data(xunits=u.micron, yunits=u.dimensionless_unscaled)
         if flag == 'mk':
-            self.get_sky_data(vapor, airmass, bvt='trans', xunits=u.micron, yunits=u.dimensionless_unscaled)
+            va = min([10, 16, 30, 50], key=lambda x:abs(x - vapor*10))
+            am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
+            self.filename = "skytrans/%strans_zm_%d_%d.dat"%(flag, va, am)
+            self.default_name = "skytrans/mktrans_zm_10_10.dat"
+            self.get_data(xunits=u.micron, yunits=u.dimensionless_unscaled)
         elif flag == 'cp':
             va = min([23, 43, 76, 100], key=lambda x:abs(x - vapor*10))
             am = min([10, 15, 20], key=lambda x:abs(x - airmass*10))
@@ -272,9 +122,11 @@ class InstTransEm(DataFile):
         self.temps = self.y
 
     def BB(self, temp, wavelengths):
-        flux = blackbody_lambda(wavelengths, temp)*u.sr
-        out = flux.to(u.photon/u.s/u.cm**2/u.micron, equivalencies=u.spectral_density(wavelengths))
-        return out / (1.*u.sr).to(u.arcsec**2)
+        #flux = blackbody_lambda(wavelengths, temp)*u.sr
+        bb = BlackBody(temperature=temp,scale=1.0*u.erg / (u.cm ** 2 * u.s * u.AA * u.sr))
+        flux = bb(wavelengths)
+        out = flux.to(u.photon/u.s/u.cm**2/u.micron/(u.arcsec**2), equivalencies=u.spectral_density(wavelengths))
+        return out
 
 
 
@@ -327,8 +179,8 @@ class QE(DataFile):
 
 class Prism(DataFile):
     def __init__(self, lmin, lmax):
-        self.filename = str(lmin)+'_'+str(lmax)+'_prism.txt'
-        print(self.filename)
+        self.filename = 'dispersion_curves/'+str(lmin)+'_'+str(lmax)+'_prism.txt'
+        #print(self.filename)
         if os.path.isfile('./data/{}'.format(self.filename))==True:
             #####need to add ys to OG prism files
             self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
@@ -353,35 +205,17 @@ class Prism(DataFile):
     def get_dlam(self):
         return np.gradient(self.ll.value) * self.ll.unit
 
-class Grism(DataFile):
-    def __init__(self, lmin, lmax, bra):
-        self.filename = str(lmin)+'_'+str(lmax)+'_grism.txt'
-        print(self.filename)
-        if os.path.isfile('./data/{}'.format(self.filename))==True and bra==False:
+class Grating(DataFile):
+    def __init__(self, lmin, lmax):
+        self.filename = 'dispersion_curves/'+str(lmin)+'_'+str(lmax)+'_grat.txt'
+        #print(self.filename)
+        if os.path.isfile('./data/{}'.format(self.filename))==True:
             #####need to add ys to OG prism files
             self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
             ###units of dispersion curve x and y are mm!!!
             lams_des = lams_binned=np.linspace(1.9,5.3,3401)
-            #lams_des = lams_binned=np.linspace(1.9,5.3,34001)#
-            #xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
-            #yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
-            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic',fill_value="extrapolate")
-            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic',fill_value="extrapolate")
-            x2 = xinterp(lams_des)
-            y2 = yinterp(lams_des)
-            self.ll = lams_des*u.micron
-            self.x = x2*1000.0 ##Grism file is in microns
-            self.y = y2*1000.0 ##Grism file is in microns
-        if os.path.isfile('./data/{}'.format(self.filename))==True and bra==True:
-            #####need to add ys to OG prism files
-            self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
-            ###units of dispersion curve x and y are mm!!!
-            #lams_des = lams_binned=np.linspace(1.9,5.3,3401)
-            lams_des = lams_binned=np.linspace(1.9,5.3,34001)#
-            #xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
-            #yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
-            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic',fill_value="extrapolate")
-            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic',fill_value="extrapolate")
+            xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
+            yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
             x2 = xinterp(lams_des)
             y2 = yinterp(lams_des)
             self.ll = lams_des*u.micron
@@ -399,17 +233,9 @@ class Grism(DataFile):
     def get_dlam(self):
         return np.gradient(self.ll.value) * self.ll.unit
 
-
 class Filter(DataFile):
     def __init__(self, fkw = 'filter_perfect',lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
-        filename = fkw+'_'+str(lmin)+'_'+str(lmax)+'.txt'
-
-
-
-
-class Filter(DataFile):
-    def __init__(self, fkw = 'filter_perfect',lmin = 2.0, lmax = 5.2, od = -100): #filename='L_filter.txt'):
-        filename = fkw+'_'+str(lmin)+'_'+str(lmax)+'.txt'
+        filename = 'ifs_filters/'+fkw+'_'+str(lmin)+'_'+str(lmax)+'.txt'
         self.filename = filename
         #if filter_name == 'L':
         #    self.filename = 'L_filter.txt'
@@ -419,7 +245,7 @@ class Filter(DataFile):
 
 class ImagerFilter(DataFile):
     def __init__(self, filename='nirc2_Lp.txt'):
-        self.filename = filename
+        self.filename = 'imager_filters/'+filename
         self.get_data(yunits=u.dimensionless_unscaled)
 
 
@@ -537,6 +363,115 @@ def spectres(new_spec_wavs, old_spec_wavs, spec_fluxes, spec_errs=None):
     # Otherwise just return the resampled_fluxes spectrum array
     else:
         return resampled_fluxes
+    
+    
+def spectbin(new_spec_wavs, old_spec_wavs, spec_fluxes, spec_errs=None):
+
+    """
+    Function for resampling spectra (and optionally associated uncertainties) onto a new wavelength basis.
+    Parameters
+    ----------
+    new_spec_wavs : numpy.ndarray
+        Array containing the new wavelength sampling desired for the spectrum or spectra.
+    old_spec_wavs : numpy.ndarray
+        1D array containing the current wavelength sampling of the spectrum or spectra.
+    spec_fluxes : numpy.ndarray
+        Array containing spectral fluxes at the wavelengths specified in old_spec_wavs, last dimension must correspond to the shape of old_spec_wavs.
+        Extra dimensions before this may be used to include multiple spectra.
+    spec_errs : numpy.ndarray (optional)
+        Array of the same shape as spec_fluxes containing uncertainties associated with each spectral flux value.
+
+    Returns
+    -------
+    resampled_fluxes : numpy.ndarray
+        Array of resampled flux values, first dimension is the same length as new_spec_wavs, other dimensions are the same as spec_fluxes
+    resampled_errs : numpy.ndarray
+        Array of uncertainties associated with fluxes in resampled_fluxes. Only returned if spec_errs was specified.
+    """
+
+    # Generate arrays of left hand side positions and widths for the old and new bins
+    spec_lhs = np.zeros(old_spec_wavs.shape[0])
+    spec_widths = np.zeros(old_spec_wavs.shape[0])
+    spec_lhs = np.zeros(old_spec_wavs.shape[0])
+    spec_lhs[0] = old_spec_wavs[0] - (old_spec_wavs[1] - old_spec_wavs[0])/2
+    spec_widths[-1] = (old_spec_wavs[-1] - old_spec_wavs[-2])
+    spec_lhs[1:] = (old_spec_wavs[1:] + old_spec_wavs[:-1])/2
+    spec_widths[:-1] = spec_lhs[1:] - spec_lhs[:-1]
+
+    filter_lhs = np.zeros(new_spec_wavs.shape[0]+1)
+    filter_widths = np.zeros(new_spec_wavs.shape[0])
+    filter_lhs[0] = new_spec_wavs[0] - (new_spec_wavs[1] - new_spec_wavs[0])/2
+    filter_widths[-1] = (new_spec_wavs[-1] - new_spec_wavs[-2])
+    filter_lhs[-1] = new_spec_wavs[-1] + (new_spec_wavs[-1] - new_spec_wavs[-2])/2
+    filter_lhs[1:-1] = (new_spec_wavs[1:] + new_spec_wavs[:-1])/2
+    filter_widths[:-1] = filter_lhs[1:-1] - filter_lhs[:-2]
+
+    # Check that the range of wavelengths to be resampled_fluxes onto falls within the initial sampling region
+    if filter_lhs[0] < spec_lhs[0] or filter_lhs[-1] > spec_lhs[-1]:
+        raise ValueError("spectres: The new wavelengths specified must fall within the range of the old wavelength values.")
+
+    #Generate output arrays to be populated
+    resampled_fluxes = np.zeros(spec_fluxes[...,0].shape + new_spec_wavs.shape)
+
+    if spec_errs is not None:
+        if spec_errs.shape != spec_fluxes.shape:
+            raise ValueError("If specified, spec_errs must be the same shape as spec_fluxes.")
+        else:
+            resampled_fluxes_errs = np.copy(resampled_fluxes)
+
+    start = 0
+    stop = 0
+
+    # Calculate the new spectral flux and uncertainty values, loop over the new bins
+    for j in range(new_spec_wavs.shape[0]):
+
+        # Find the first old bin which is partially covered by the new bin
+        while spec_lhs[start+1] <= filter_lhs[j]:
+            start += 1
+
+        # Find the last old bin which is partially covered by the new bin
+        while spec_lhs[stop+1] < filter_lhs[j+1]:
+            stop += 1
+
+        # If the new bin falls entirely within one old bin the are the same the new flux and new error are the same as for that bin
+        if stop == start:
+
+            resampled_fluxes[...,j] = spec_fluxes[...,start]
+            if spec_errs is not None:
+                resampled_fluxes_errs[...,j] = spec_errs[...,start]
+
+        # Otherwise multiply the first and last old bin widths by P_ij, all the ones in between have P_ij = 1
+        else:
+
+            start_factor = (spec_lhs[start+1] - filter_lhs[j])/(spec_lhs[start+1] - spec_lhs[start])
+            end_factor = (filter_lhs[j+1] - spec_lhs[stop])/(spec_lhs[stop+1] - spec_lhs[stop])
+
+            spec_widths[start] *= start_factor
+            spec_widths[stop] *= end_factor
+            
+            spec_weights = np.ones(spec_widths.shape)
+            spec_weights[start] = start_factor
+            spec_weights[stop] = end_factor
+
+            # Populate the resampled_fluxes spectrum and uncertainty arrays
+            resampled_fluxes[...,j] = np.sum(spec_weights[start:stop+1]*spec_fluxes[...,start:stop+1], axis=-1)
+
+            if spec_errs is not None:
+                resampled_fluxes_errs[...,j] = np.sqrt(np.sum((spec_weights[start:stop+1]*spec_errs[...,start:stop+1])**2, axis=-1))
+
+            # Put back the old bin widths to their initial values for later use
+            spec_widths[start] /= start_factor
+            spec_widths[stop] /= end_factor
+
+
+    # If errors were supplied return the resampled_fluxes spectrum and error arrays
+    if spec_errs is not None:
+        return resampled_fluxes, resampled_fluxes_errs
+
+    # Otherwise just return the resampled_fluxes spectrum array
+    else:
+        return resampled_fluxes
+
 
 
 

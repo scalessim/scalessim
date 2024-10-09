@@ -17,10 +17,8 @@ class SCALES:
         self.lens.args['max_wavelength'] = self.wav_max
         self.lens.lmin = self.wav_min
         self.lens.lmax = self.wav_max
-        ###lenslet initialization is hella clunky - fix this!!!
-
         self.lens.get_shifts()
-        self.lens.make_trace(phys=True,disp=True)
+        self.lens.make_trace()
         self.filt = Filter(lmin=self.lens.lmin,lmax=self.lens.lmax,fkw='asahi')
 
 
@@ -112,6 +110,7 @@ class SCALES:
             label.close()
         
         raw_seq=np.array(raw_seq)
+        print(np.where(raw_seq < 0))
         if shot_off==False: raw_seq = np.random.poisson(raw_seq)
         if hxrg_off==False:
             detector = Detector()
@@ -161,7 +160,6 @@ class SCALES:
             if len(cube_in.shape)>3:
                 cube_seq = []
                 for iii in range(len(cube_in)):
-                    if verbose==True: print(iii)
                     cube_out = self.fp.get_fp(dit*u.s,cube=cube_in[iii],return_full=False,bg_off = bkg_off,verbose=verbose)
                     cube_seq.append(cube_out)
             else:
