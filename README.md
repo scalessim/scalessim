@@ -15,7 +15,7 @@ You'll need to get a folder called "data" and put it in the main scalessim direc
 Create conda environment from yml file. 
 
 ```bash
-conda env create -f scalessim.yml
+conda env create -f scalessim.yaml
 ```
 
 Activate conda environment and open up jupyter notebook. 
