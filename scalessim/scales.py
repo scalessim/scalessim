@@ -25,8 +25,9 @@ class SCALES:
         self.lens.args['max_wavelength'] = self.wav_max
         self.lens.lmin = self.wav_min
         self.lens.lmax = self.wav_max
+        self.lens.get_shifts()
+
         if fullfr==True:
-            self.lens.get_shifts()
             self.lens.make_trace(verbose=verbose,upsample_factor=self.upsamp)
         self.filt = Filter(lmin=self.lens.lmin,lmax=self.lens.lmax,fkw='asahi')
 
