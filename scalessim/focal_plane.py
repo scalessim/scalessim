@@ -16,15 +16,14 @@ class FocalPlane:
         self.SkyTrans = args['SkyTrans']
         self.Inst = args['InstTransEm']
         self.QE = args['QE']
-        self.Prism = self.Lenslet.Prism
         self.Filter = args['Filter']
         self.fov = (self.Lenslet.args['fov']*u.arcsec)**2
         self.num_spaxel = self.Lenslet.num
 
+        self.Prism = self.Lenslet.Prism
         self.dlam = self.Prism.get_dlam()
         self.lam = self.Prism.ll
 
-        self.buffer = self.Lenslet.trace.shape[1] // 2
 
         self.area = self.Lenslet.args['area'] * u.m**2
 
