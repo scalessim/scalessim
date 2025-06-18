@@ -5,16 +5,15 @@ import numpy as np
 import astropy.units as u
 from ipywidgets import IntProgress,Label
 from IPython.display import display
+from copy import deepcopy
 
 class FocalPlane:
     def __init__(self, args, gain=8):
 
         self.gain = gain #e/DN
         self.Lenslet = args['Lenslet_object']
-        #self.Target = args['Target']
         self.SkyBG = args['SkyBG']
         self.SkyTrans = args['SkyTrans']
-        #elf.AtmoDispersion = args['AtmoDispersion']
         self.Inst = args['InstTransEm']
         self.QE = args['QE']
         self.Prism = self.Lenslet.Prism
@@ -24,26 +23,16 @@ class FocalPlane:
 
         self.dlam = self.Prism.get_dlam()
         self.lam = self.Prism.ll
-        #self.pre_image = self.Target.preimage
 
         self.buffer = self.Lenslet.trace.shape[1] // 2
 
-        self.area = self.Lenslet.args['area'] * u.m**2#np.pi*((self.Lenslet.args['telescope_diameter']/2)**2 - (self.Lenslet.args['secondary_diameter']/2)**2) * u.m**2
+        self.area = self.Lenslet.args['area'] * u.m**2
 
     def get_fp(self, dit, Target=None, PSF=None, bg_off=False, cube=None, return_full=True,verbose=False,return_phots=False,medium=False):
         output = np.zeros((len(self.lam), self.num_spaxel, self.num_spaxel))
         if medium==True:
             output = np.zeros((len(self.lam), self.num_spaxel-1, self.num_spaxel))
-
-        #test = self.SkyBG.resample(self.lam)
-        #plt.plot(self.SkyBG.x,self.SkyBG.y)
-        #plt.plot(self.lam,test)
-        #plt.show()
-        #print(test)
-
-        #print(self.fov)
-        #print(self.num_spaxel)
-        #stop
+            
 
         skybg = self.SkyBG.resample(self.lam) * self.fov / self.num_spaxel**2
 
@@ -57,13 +46,27 @@ class FocalPlane:
         filtertrans = self.Filter.interp(self.lam)
         skytrans = self.SkyTrans.resample(self.lam)
         teltrans,insttrans = self.Inst.get_trans(self.lam)
+
+        #plt.scatter(self.lam,filtertrans)
+        #plt.show()
+
+        #plt.scatter(range(len(filtertrans.value)),filtertrans)
+        #plt.show()
+
+
+        
         #print(skybg)
         #stop
         #print(instbg)
         #print(teltrans)
         #print(insttrans)
 
+
+   
         self.trans = teltrans*insttrans*filtertrans*skytrans
+
+        #plt.scatter(self.lam,self.trans)
+        #plt.show()
 
         bg_spec_in_phot = dit*(teltrans*insttrans*filtertrans*skybg + insttrans*filtertrans*instbg) * self.dlam * self.area.to(u.cm**2)
         #print(bg_spec_in_phot)
@@ -95,7 +98,7 @@ class FocalPlane:
             source_spec_in_phot = dit*self.trans*source2 * self.dlam * self.area.to(u.cm**2)
             source_spec_in_dn = source_spec_in_phot*qe / self.gain / u.electron
 
-
+   
             if return_phots == True:
                 img += PSF * source_spec_in_phot[:, None, None].value
 
@@ -118,7 +121,7 @@ class FocalPlane:
                 img += (cube2 * mult_phot[:, None, None]).value
             else:
                 img += (cube2 * mult_dn[:, None, None]).value
-
+                #print('scaling cube')
 
         if return_full:
             #print('making full raw image')
@@ -135,18 +138,33 @@ class FocalPlane:
             ##stop
             cind = np.where(np.abs(self.lam.value - lmin)<1.0e-6)[0][0]
             cind_max = np.where(np.abs(self.lam.value - lmax)<1.0e-6)[0][0]
-            
+
             ####trace generation set first values of xx2,yy2 to 28,28
             ####then moved them down and right from there (i.e. backwards)
             
             testx,testy = self.Lenslet.xx2[0],self.Lenslet.yy2[0]
             offsetsx = 28.0 - (self.Lenslet.xx2 - testx)
             offsetsy = 28.0 - (self.Lenslet.yy2 - testy)
-            
 
+
+            
             
             dx = self.Lenslet.xx2[cind]
             dy = self.Lenslet.yy2[cind]
+
+            #print(lmin)
+            #print(cind)
+
+            #plt.scatter(self.lam.value,self.Lenslet.yy2)
+            #plt.axhline(dy)
+            #plt.show()
+
+            #plt.scatter(self.lam.value,self.Lenslet.xx2)
+            #plt.axhline(dx)
+            #plt.show()
+            
+            #print(dy)
+            #stop
             dxm = self.Lenslet.xx2[cind_max]
             dym = self.Lenslet.yy2[cind_max]
             #print(dxm,dx)
@@ -280,75 +298,143 @@ class FocalPlane:
 
             
             if medium==True:
-                shifts = pyfits.getdata('/Users/stephsallum/Dropbox/scalessim/data/medres_shifts.fits')
+                if verbose==True: 
+                    f2 = IntProgress(min=0, max=17*18) # instantiate the bar
+                    count = 0
+                    label2 = Label(value="Progress: "+str(count)+' of '+str(18*17)+' lenslets')
+                    display(label2)
+                    display(f2)   
+                shifts = pyfits.getdata('data/medres_shifts_new.fits')
+                shifts[:,:,0]+=10
+                shifts[:,:,1]+=10
+                #print(shifts.shape)
+                #plt.scatter(shifts[:,:,1],shifts[:,:,0])
+                #plt.show()
+
+                
                 for ii in range(self.num_spaxel):
                 #for ii in range(1,2):
-                    if verbose==True: print(ii)
+                    #if verbose==True: print(ii)
                     for jj in range(self.num_spaxel-1):
-                        if verbose == True: print(ii,jj)
+
+                        
+                    
+                        count+=1
+                        #if count%17==0:
+                        if verbose==True:
+                            f2.value=count
+                            label2.value = "Progress: "+str(count)+' of '+str(18*17)+' lenslets'
+                        #if verbose == True: print(ii,jj)
                         shiftx,shifty = shifts[ii,jj,1],shifts[ii,jj,0]
 
-                        tinp = self.Lenslet.trace.copy()*img[:,jj,ii].reshape([len(img),1,1])
+                        #print(dy,shifty)
+                        #print(dx,shiftx)
+
+                        #pixel dy needs to move to pixel shifty
+                        #pixel dx needs to move to pixel shiftx
+                        #crop image down to dy-1-shifty, dx-1-shiftx
+
+                        
+                        ycst = int(dy-shifty)-1
+                        ypl = 0
+                        if ycst < 0:
+                            ypl = -ycst
+                            ycst = 0
+                        yce = ycst+2050
+                        
+                        xcst = int(dx-shiftx)-1
+                        xpl = 0
+                        if xcst < 0:
+                            xpl = -xcst
+                            xcst = 0
+                        xce = xcst+2050
+                        
+                        
+                        #stop
+                        
+                        #print('multiply')
+
+                        im_mult = img[:,jj,ii].reshape([len(img),1,1])
+                        tinp = self.Lenslet.trace[:,ycst:yce,xcst:xce]*im_mult
+                        #print(tinp.shape)
+                        #print('sum')
+                        
                         tinp = tinp.sum(0)
+                        #plt.imshow(tinp)
+                        #plt.show()
+                        #pyfits.writeto('tinp.fits',np.array(tinp),overwrite=True)
+                        #stop
 
 
+                        #toadd = np.zeros([2060,tinp.shape[0]+2])
+                        #dxt = len(toadd[0])
+                        #dyt = len(toadd)
+                        #print(dy,dx)
+                        #print(tinp.shape)
+                        #toadd[:1+len(tinp[int(dy)-1:int(dy)+2050]),1:1+len(tinp[0])] = np.array(tinp[int(dy):int(dy)+2050])
+                        #plt.imshow(tinp[int(dy):int(dy)+2050])
+                        #plt.show()
+                        #stop
 
-                        toadd = np.zeros([tinp.shape[0]+2,tinp.shape[1]+2])
-                        dxt = len(toadd[0])
-                        dyt = len(toadd)
-                        toadd[1:1+len(tinp),1:1+len(tinp[0])] = np.array(tinp)
-
-
+                        
+                        
                         ###shifty is where the spectrum should get moved to
                         ####dy is where the spectrum starts in the trace
                         dimy = shifty-int(shifty) - (dy-int(dy))
                         dimx = shiftx-int(shiftx) - (dx-int(dx))
+                        
+                        
+                        
                         ###shift by the correct non-integer value
-                        print(dimx,dimy)
-                        toadd = shift(toadd,(dimy,dimx),order=1,prefilter=False)
+                        #print(dy,dx)
+                        #print(shifty,shiftx)
+                        #print(dimx,dimy)
+                        #plt.imshow(tinp)
+                        #plt.xlim(0,50)
+                        #plt.ylim(0,40)
+                        #plt.colorbar()
+                        #plt.show()
+                        toadd = shift(tinp,(dimy,dimx),order=1,prefilter=False)
 
-                        ####crop to correct amount
-                        pad = 6
-                        toadd = toadd[int(dy-pad):int(dy+ysize+pad),int(dx-pad):int(dx+xsize+pad)]
-                        print(toadd.shape)
-                        ystart = int(shifty)
-                        xstart = int(shiftx)
-                        xend = int(shiftx)+len(toadd[0])
-                        yend = int(shifty)+len(toadd)
-                        print(xstart,ystart)
-                        print(xend,yend)
+                        
+                        
+
+                        #ystart = int(shifty)
+                        #xstart = int(shiftx)
+                        #xend = int(shiftx)+len(toadd[0])
+                        #yend = int(shifty)+len(toadd)
+                        #print(ystart)
+                        #print(xstart)
+                        #stop
+                        
+                        #print(xstart,ystart)
+                        #print(xend,yend)
+                        xend = xpl + len(toadd[0])
+                        yend = ypl + len(toadd)
+                        
                         if xend > 2048:
                             toadd = toadd[:,:-(xend-2048)]
                             xend = 2048
                         if yend > 2048:
                             toadd = toadd[:-(yend-2048),:]
-                        """
-                        if imy < 0:
-                            toadd = toadd[int(np.abs(imy)):,:]
-                            py = 0
-                            dyt = len(toadd)
-                            imy = 0
-                        if imx < 0:
-                            toadd = toadd[:,int(np.abs(imx)):]
-                            px = 0
-                            dxt = len(toadd[0])
-                            imx = 0
-                        lpx = imx+dxt
-                        if lpx > 2048:
-                            cx = lpx-2048
-                            toadd = toadd[:,:-cx]
-                            dxt = len(toadd[0])
-                        lpy = imy+dyt
-                        if lpy > 2048:
-                            cy = lpy-2048
-                            toadd = toadd[:-cy,:]
-                            dyt = len(toadd)
-                        print(imy,imx)
-                        print(toadd.shape)
-                        stop
-                        """
-                        pyfits.writeto('test_toadd.fits',np.array(toadd),clobber=True)
-                        out_array[ystart:yend,xstart:xend] += toadd
+                            yend = 2048
+                        #pyfits.writeto('test_toadd.fits',np.array(toadd),overwrite=True)
+                        #plt.imshow(toadd)
+                        #plt.show()
+                        #stop
+                        #pyfits.writeto('test_toadd.fits',np.array(toadd),clobber=True)
+                        out_array[ypl:yend,xpl:xend] += toadd
+
+                        #plt.imshow(out_array)
+                        #plt.xlim(xpl,xpl+30)
+                        #plt.ylim(ypl,ypl+30)
+                        #plt.colorbar()
+                        #plt.show()
+                        #stop
+                if verbose==True:
+                    f2.bar_style = 'success'
+                    f2.close()
+                    label2.close()
             
             return out_array
         else:

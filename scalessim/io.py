@@ -213,7 +213,7 @@ class Grating(DataFile):
             #####need to add ys to OG prism files
             self.ll, self.x, self.y = np.loadtxt('./data/{}'.format(self.filename), unpack=True)
             ###units of dispersion curve x and y are mm!!!
-            lams_des = lams_binned=np.linspace(1.9,5.3,3401)
+            lams_des = lams_binned=np.linspace(1.9,5.3,34001)
             xinterp = interpolate.interp1d(self.ll,self.x,kind='cubic')
             yinterp = interpolate.interp1d(self.ll,self.y,kind='cubic')
             x2 = xinterp(lams_des)

@@ -1,7 +1,15 @@
 import ipywidgets as widgets
 
 def mode_select(start=0):
-    opts=['SED: 2.0-5.2', 'K: 1.95-2.45','L: 2.9-4.15','M: 4.5-5.2', 'H2O: 2.0-3.7','CH4: 3.1-3.5']
+    opts=['Low-Res SED: 2.0-5.2', 
+          'Low-Res K: 1.95-2.45',
+          'Med-Res K: 1.95-2.45',
+          'Low-Res L: 2.9-4.15',
+          'Med-Res L: 2.9-4.15',
+          'Low-Res M: 4.5-5.2',
+          'Med-Res M: 4.5-5.2',
+          'Low-Res H2O: 2.0-4.0',
+          'Low-Res PAH: 3.1-3.5']
     scalesmode=widgets.Dropdown(
         options=opts,
         value=opts[start],

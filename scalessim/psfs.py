@@ -4,7 +4,11 @@ from scipy.ndimage import zoom, shift
 import matplotlib.pyplot as plt
 
 class PSFs:
-    def __init__(self,guidestar):
+    def __init__(self,guidestar,scales):
+
+        if scales.sim_med == True: self.med=True
+        else: self.med=False
+        print(self.med)
         self.datadir = 'data/PSFs/'
         
         all_psfs = []
@@ -17,7 +21,10 @@ class PSFs:
         self.all_psfs = all_psfs
         self.all_psfs_c = all_psfs_c
 
-    def interp_psfs_wav(self, psf, lamc=3.4, lams_binned=np.linspace(1.9,5.3,341)):
+    def interp_psfs_wav(self, psf, lamc=3.4):
+        lams_binned=np.linspace(1.9,5.3,341)
+        if self.med == True:
+            lams_binned=np.linspace(1.9,5.3,34001)
         psf_cube = []
         for i in range(len(lams_binned)):
             tmp = zoom(psf,lams_binned[i]/lamc,order=1,grid_mode=False,prefilter=False)
@@ -29,7 +36,10 @@ class PSFs:
                     tmp2[54-len(tmp)//2:54+len(tmp)//2,54-len(tmp)//2:54+len(tmp)//2]=tmp
             if len(tmp)>108:
                 tmp2=tmp[len(tmp)//2-54:54+len(tmp)//2,len(tmp)//2-54:54+len(tmp)//2]
-            psf_cube.append(tmp2) 
+            if self.med==False:
+                psf_cube.append(tmp2) 
+            if self.med==True:
+                psf_cube.append(tmp2[54-8:54+9,54-9:54+9])
         return psf_cube        
 
     def PSF_sequence(self, nframes = 1, verbose=False, vortex=False):
