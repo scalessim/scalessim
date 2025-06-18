@@ -7,7 +7,7 @@ from scalessim.detectors import *
 
 
 class SCALES:
-    def __init__(self,scalesmode,verbose=False):
+    def __init__(self,scalesmode,verbose=False,fullfr=False):
         self.res = scalesmode.value.split(' ')[0]
         if self.res == 'Med-Res': 
             self.sim_med = True
@@ -25,8 +25,9 @@ class SCALES:
         self.lens.args['max_wavelength'] = self.wav_max
         self.lens.lmin = self.wav_min
         self.lens.lmax = self.wav_max
-        self.lens.get_shifts()
-        self.lens.make_trace(verbose=verbose,upsample_factor=self.upsamp)
+        if fullfr==True:
+            self.lens.get_shifts()
+            self.lens.make_trace(verbose=verbose,upsample_factor=self.upsamp)
         self.filt = Filter(lmin=self.lens.lmin,lmax=self.lens.lmax,fkw='asahi')
 
 
