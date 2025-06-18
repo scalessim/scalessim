@@ -13,14 +13,14 @@ git clone https://github.com/scalessim/scalessim
 Create conda environment from yml file. 
 
 ```bash
-conda env create -f scales.yml
+conda env create -f scalessim.yml
 ```
 
 Activate conda environment and open up jupyter notebook. 
 
 ```bash
-conda activate scales
+conda activate my-scalessim
 jupyter notebook
 ```
 
-Open up example notebook: scales_SED_cube.ipynb. You can change the scene and settings in the second code cell.
+Open up an example notebook like scales_lowres_planet_injection.ipynb!
