@@ -37,47 +37,24 @@ class FocalPlane:
 
         instbg = self.Inst.get_em(self.lam) * self.fov / self.num_spaxel**2
         qe = self.QE.get_qe(self.lam)
-        ####print(skybg)
-        ####print(instbg)
-        ####stop
+        
+        
         self.bg = skybg + instbg
 
         filtertrans = self.Filter.interp(self.lam)
         skytrans = self.SkyTrans.resample(self.lam)
         teltrans,insttrans = self.Inst.get_trans(self.lam)
 
-        #plt.scatter(self.lam,filtertrans)
-        #plt.show()
-
-        #plt.scatter(range(len(filtertrans.value)),filtertrans)
-        #plt.show()
-
-
         
-        #print(skybg)
-        #stop
-        #print(instbg)
-        #print(teltrans)
-        #print(insttrans)
-
-
-   
+        
         self.trans = teltrans*insttrans*filtertrans*skytrans
 
-        #plt.scatter(self.lam,self.trans)
-        #plt.show()
-
+        
+        
         bg_spec_in_phot = dit*(teltrans*insttrans*filtertrans*skybg + insttrans*filtertrans*instbg) * self.dlam * self.area.to(u.cm**2)
-        #print(bg_spec_in_phot)
-        #stop
-
-        #bg_spec_in_phot = dit*insttrans*filtertrans*(skybg + instbg) * self.dlam * self.area.to(u.cm**2)
         bg_spec_in_dn = bg_spec_in_phot*qe / self.gain / u.electron
-        #plt.plot(self.lam,bg_spec_in_dn)
-        #plt.show()
-        #stop
-
-
+        
+        
         if not bg_off:
             img = np.ones_like(output)
             #print('adding bkg')
