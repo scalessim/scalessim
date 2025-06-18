@@ -10,6 +10,8 @@ Clone the repository.
 git clone https://github.com/scalessim/scalessim
 ```
 
+You'll need to get a folder called "data" and put it in the main scalessim directory.
+
 Create conda environment from yml file. 
 
 ```bash
